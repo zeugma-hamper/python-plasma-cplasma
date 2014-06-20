@@ -1,0 +1,44 @@
+#!/usr/bin/env perl
+
+use warnings;
+use strict;
+
+my $at_least = shift;
+
+my ($min_major, $min_minor);
+if ($at_least  &&  $at_least !~ /^(\d+)\.(\d+)$/)
+  { die "you asked for g-speak version at least $at_least, "
+        .  "but that's not a version number I understand";
+  } else {
+    ($min_major, $min_minor) = ($1, $2);
+  }
+
+# pick a modern sane default if nobody asked us for a specific version.
+$min_major ||= 3;
+$min_minor ||= 0;
+
+my @g_speaks;
+
+# TODO: need to parse output of ob-version and make this mac-aware.  4 Doug.
+
+for my $g_speak (`ls -d /opt/oblong/g-speak*`)
+  { my ($major, $minor) = $g_speak =~ m|/opt/oblong/g-speak(?:(\d+)\.(\d+))$|;
+    next  unless  defined ($major) and defined ($minor);
+    next  unless  $major >= $min_major;
+    next  unless  $minor >= $min_minor;
+    push @g_speaks, $g_speak;
+  }
+
+my @sorted_g_speaks = map { $_->[0] }
+                      sort { $b->[1] <=> $a->[1] ||
+                             $b->[2] <=> $a->[2] }
+                      map { my ($major, $minor) = $_ =~
+                              m|/opt/oblong/g-speak(?:(\d+)\.(\d+))$|;
+                            [$_, $major, $minor ];
+                      } @g_speaks;
+
+# on a mac we default to /opt/oblong/g-speak-64-2, see if an ob-version
+# in there thinks it works for us.
+die("No g-speak found") if not @sorted_g_speaks;
+
+print $sorted_g_speaks[0]  if  @sorted_g_speaks;
