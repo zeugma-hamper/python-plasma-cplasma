@@ -75,8 +75,9 @@ message(STATUS " CPLASMA_YOBUILD_HOME is ${G_SPEAK_YOBUILD_HOME}\n")
 INCLUDE_DIRECTORIES(${G_SPEAK_INCLUDE_DIRS})
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${G_SPEAK_DEFINITIONS}")
 
-set(cplasma_sources cplasma.cpp)
+set(cplasma_ext_sources cplasma_ext.cpp)
 
-add_library(cplasma MODULE cplasma.cpp)
-target_link_libraries(cplasma -lboost_python -lpython2.7 ${G_SPEAK_LIBRARIES})
-set_target_properties(cplasma PROPERTIES PREFIX "")
+add_library(cplasma_ext MODULE cplasma_ext.cpp)
+target_link_libraries(cplasma_ext -lboost_python -lboost_numpy -lpython2.7 ${G_SPEAK_LIBRARIES})
+set_target_properties(cplasma_ext PROPERTIES PREFIX "")
+
