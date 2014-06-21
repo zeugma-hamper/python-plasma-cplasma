@@ -14,7 +14,6 @@
 #include <string>
 #include <vector>
 
-
 namespace py = boost::python;
 
 class PlasmaException : public std::exception {
@@ -126,6 +125,8 @@ class BSlaw {
  public:
   BSlaw (bslaw s) : slaw_ { s } {}
 
+  slaw dup () { return slaw_dup (slaw_); }
+
   py::object emit_list () const {
     py::list lst;
     bslaw s = slaw_list_emit_first (slaw_);
@@ -176,10 +177,8 @@ class BSlaw {
   }
 
   py::object emit_numeric () const { 
-    std::cerr << "Emit numeric\n";
     FOR_ALL_INTS(RETURN_IF_NUMERIC,,slaw_);
     FOR_ALL_FLOATS(RETURN_IF_NUMERIC,,slaw_);
-    std::cerr << "No numerics found(?)\n";
     return py::object();
   }
 
@@ -230,95 +229,6 @@ class BProtein {
     return dct;
   }
 };
-
-class Hose {
- private:
-  pool_hose hose;
-
- public:
-  Hose (std::string pool) : hose { nullptr } {
-    ob_retort tort = pool_participate (pool . c_str (),
-                                       &hose,
-                                       nullptr);
-    if (0 > tort) {
-      hose = nullptr; // belt, suspenders
-      throw PlasmaException (tort);
-    }
-    tort = pool_hose_enable_wakeup (hose);
-    if (0 > tort) {
-      pool_withdraw (hose);
-      hose = nullptr;
-      throw PlasmaException (tort);
-    }
-  }
-
-  virtual ~Hose () {
-    if (nullptr != hose) {
-      pool_withdraw (hose);
-    }
-  }
-
-  const char* name() const {
-    return pool_name (hose);
-  }
-
-  int64 newest_index() const {
-    int64 out;
-    THROW_ERROR_TORT(pool_newest_index(hose, &out));
-    return out;
-  }
-
-  int64 oldest_index() const {
-    int64 out;
-    THROW_ERROR_TORT(pool_oldest_index(hose, &out));
-    return out;
-  }
-
-  int64 index() const {
-    int64 out;
-    THROW_ERROR_TORT(pool_index (hose, &out));
-    return out;
-  }
-
-  void rewind() { THROW_ERROR_TORT(pool_rewind (hose)); }
-  void tolast() { THROW_ERROR_TORT(pool_tolast (hose)); }
-  void runout() { THROW_ERROR_TORT(pool_runout (hose)); }
-
-  void frwdby(int64 indoff) { THROW_ERROR_TORT(pool_frwdby (hose, indoff)); }
-  void backby(int64 indoff) { THROW_ERROR_TORT(pool_backby (hose, indoff)); }
-  void seekto(int64 idx) { THROW_ERROR_TORT(pool_seekto (hose, idx)); }
-
-  void wakeup() { 
-    if (nullptr != hose) {
-      THROW_ERROR_TORT(pool_hose_wake_up (hose)); 
-    }
-  }
-
-  py::object await_next(pool_timestamp timeout) {
-    protein pro = nullptr;
-    pool_timestamp ts;
-    int64 index;
-
-    ob_retort tort = pool_await_next (hose, timeout, &pro, &ts, &index);
-    if (POOL_AWAIT_TIMEDOUT == tort || POOL_AWAIT_WOKEN == tort) {
-      return py::object();
-    }
-    if (0 > tort) {
-      throw PlasmaException (tort);
-    }
- 
-    return py::make_tuple (BProtein (pro), index, ts);
-  }
-
-  py::object await_next_forever() { return await_next (POOL_WAIT_FOREVER); }
-};
-
-static PyObject *plasmaExceptionType = nullptr;
-void translatePlasmaException (PlasmaException const& e)
-{ assert (nullptr != plasmaExceptionType);
-  py::object pythonExceptionInstance (e);
-  PyErr_SetObject(plasmaExceptionType, pythonExceptionInstance.ptr());
-}
 
 #define STR(X) #X
 
@@ -400,8 +310,7 @@ DECLARE_FLOATS(PREDECLARE_V4,);
 
 #define SLAW_FROM_NUMERIC(T)                            \
   static Ref from_ ## T (T t) {                         \
-    std::cerr << "Slaw from " << #T << "\n";            \
-        return Ref(new Slaw (slaw_ ## T (t)));          \
+    return Ref(new Slaw (slaw_ ## T (t)));              \
   }
 
 #define DECLARE_SLAW_FROM(T)                    \
@@ -422,9 +331,7 @@ class Slaw {
 
   ~Slaw () {
     if (nullptr != slaw_) {
-      std::cerr << "About to free a slaw (" << slaw_ << ")\n";
       slaw_free (slaw_);
-      std::cerr << "I'm free!\n";
       slaw_ = nullptr;
     }
   }
@@ -434,9 +341,16 @@ class Slaw {
     slaw_ = nullptr;
     return out;
   }
+
+  bslaw peek () const {
+    return slaw_;
+  }
   
+  static Ref fromBslaw (BSlaw bs) {
+    return Ref(new Slaw (bs.dup()));
+  }
+
   static Ref from_string (std::string s) {
-    std::cerr << "Slaw from string\n";
     return Ref(new Slaw (slaw_string (s.c_str())));
   }
   
@@ -455,11 +369,12 @@ class Slaw {
   static Ref nil() { return Ref (new Slaw (slaw_nil())); }
 
   static Ref from_obj(py::object &obj) {
-    std::cerr << "From Obj!\n";
+
     if (obj . is_none ()) {
       return nil();
     }
-    return nil();
+    
+    throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
 
 #define NPYARR_SINGLE(NPYTYP, OBTYP)                            \
@@ -507,15 +422,12 @@ class Slaw {
     NPYARR_SINGLE(NPY_FLOAT32, float32);
     NPYARR_SINGLE(NPY_FLOAT64, float64);
 
-    return nil();
+    throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
 
   static Ref _from_numpy(const py::numeric::array& arr, size_t len, size_t vsize) {
     const int typ = PyArray_TYPE(arr.ptr());
     void * buffer = PyArray_GETPTR1(arr.ptr(), 0);
-
-    std::cerr << "Big from numpy: "
-              << len << "\t" << vsize << "\t" << typ << "\n";
 
     if (2 == vsize) {
       NPYARR_DOUBLE(NPY_UINT8, unt8);
@@ -565,7 +477,8 @@ class Slaw {
       NPYARR_QUAD(NPY_FLOAT32, float32);
       NPYARR_QUAD(NPY_FLOAT64, float64);
     }
-    return nil();
+
+    throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
 
   static Ref from_numpy(const py::numeric::array& arr) {
@@ -578,10 +491,17 @@ class Slaw {
                           py::extract<size_t> (shape[0]),
                           py::extract<size_t> (shape[1]));
     } 
-    return nil();
+    throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
   
   BSlaw read () { return BSlaw (slaw_); }
+
+  bool isProtein() const { return slaw_is_protein (slaw_); }
+
+  static Ref makeProtein (Ref des, Ref ing) {
+    return Ref(new Slaw (protein_from_ff(des -> take (),
+                                         ing -> take ())));
+  }
 };
 
 class SlawBuilder {
@@ -603,13 +523,13 @@ class SlawBuilder {
 
   Slaw::Ref takeList () {
     slaw s = slaw_list_f (bu_);
-    bu_ = nullptr;
+    bu_ = slabu_new();
     return Slaw::Ref (new Slaw (s));
   }
 
   Slaw::Ref takeMap () {
     slaw s = slaw_map_f (bu_);
-    bu_ = nullptr;
+    bu_ = slabu_new ();
     return Slaw::Ref (new Slaw (s));
   }
 
@@ -624,6 +544,104 @@ class SlawBuilder {
   }
 };
 
+
+class Hose {
+ private:
+  pool_hose hose;
+
+ public:
+  Hose (std::string pool) : hose { nullptr } {
+    ob_retort tort = pool_participate (pool . c_str (),
+                                       &hose,
+                                       nullptr);
+    if (0 > tort) {
+      hose = nullptr; // belt, suspenders
+      throw PlasmaException (tort);
+    }
+    tort = pool_hose_enable_wakeup (hose);
+    if (0 > tort) {
+      pool_withdraw (hose);
+      hose = nullptr;
+      throw PlasmaException (tort);
+    }
+  }
+
+  virtual ~Hose () {
+    if (nullptr != hose) {
+      pool_withdraw (hose);
+    }
+  }
+
+  const char* name() const {
+    return pool_name (hose);
+  }
+
+  int64 newest_index() const {
+    int64 out;
+    THROW_ERROR_TORT(pool_newest_index(hose, &out));
+    return out;
+  }
+
+  int64 oldest_index() const {
+    int64 out;
+    THROW_ERROR_TORT(pool_oldest_index(hose, &out));
+    return out;
+  }
+
+  int64 index() const {
+    int64 out;
+    THROW_ERROR_TORT(pool_index (hose, &out));
+    return out;
+  }
+
+  void rewind() { THROW_ERROR_TORT(pool_rewind (hose)); }
+  void tolast() { THROW_ERROR_TORT(pool_tolast (hose)); }
+  void runout() { THROW_ERROR_TORT(pool_runout (hose)); }
+
+  void frwdby(int64 indoff) { THROW_ERROR_TORT(pool_frwdby (hose, indoff)); }
+  void backby(int64 indoff) { THROW_ERROR_TORT(pool_backby (hose, indoff)); }
+  void seekto(int64 idx) { THROW_ERROR_TORT(pool_seekto (hose, idx)); }
+
+  void wakeup() { 
+    if (nullptr != hose) {
+      THROW_ERROR_TORT(pool_hose_wake_up (hose)); 
+    }
+  }
+
+  py::object await_next(pool_timestamp timeout) {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    int64 index;
+
+    ob_retort tort = pool_await_next (hose, timeout, &pro, &ts, &index);
+    if (POOL_AWAIT_TIMEDOUT == tort || POOL_AWAIT_WOKEN == tort) {
+      return py::object();
+    }
+    if (0 > tort) {
+      throw PlasmaException (tort);
+    }
+ 
+    return py::make_tuple (BProtein (pro), index, ts);
+  }
+
+  int64 deposit(const Slaw& pro) {
+    if (! pro . isProtein ()) {
+      throw PlasmaException (SLAW_CORRUPT_PROTEIN);
+    }
+    int64 idx;
+    THROW_ERROR_TORT(pool_deposit (hose, pro . peek (), &idx));
+    return idx;
+  }
+
+  py::object await_next_forever() { return await_next (POOL_WAIT_FOREVER); }
+};
+
+static PyObject *plasmaExceptionType = nullptr;
+void translatePlasmaException (PlasmaException const& e)
+{ assert (nullptr != plasmaExceptionType);
+  py::object pythonExceptionInstance (e);
+  PyErr_SetObject(plasmaExceptionType, pythonExceptionInstance.ptr());
+}
 
 BOOST_PYTHON_MODULE(cplasma_ext)
 { py::class_<PlasmaException>
@@ -681,6 +699,7 @@ BOOST_PYTHON_MODULE(cplasma_ext)
       .def ("await_next", &Hose::await_next_forever)
 
       .def ("wakeup", &Hose::wakeup)
+      .def ("deposit", &Hose::deposit)
       ;
 
   py::class_<Slaw, boost::shared_ptr<Slaw> >
@@ -689,7 +708,8 @@ BOOST_PYTHON_MODULE(cplasma_ext)
   slawClass
       .def ("make", &Slaw::from_obj)
       .def ("read", &Slaw::read)
-      .def ("make", &Slaw::from_string) 
+      .def ("make", &Slaw::from_string)
+      .def ("make", &Slaw::fromBslaw)
       DECLARE_INTS(DECLARE_SLAW_FROM,)
       DECLARE_FLOATS(DECLARE_SLAW_FROM,)
       DECLARE_INTS(DECLARE_SLAW_FROM, v2)
@@ -701,9 +721,11 @@ BOOST_PYTHON_MODULE(cplasma_ext)
       .def ("make", &Slaw::from_numpy)
       .def ("make_array", &Slaw::from_numpy)
       .def ("nil", &Slaw::nil)
+      .def ("makeProtein", &Slaw::makeProtein)
       .staticmethod ("make")
       .staticmethod ("make_array")
       .staticmethod ("nil")
+      .staticmethod ("makeProtein")
       ;
 
   py::class_<SlawBuilder, SlawBuilder::Ref>
