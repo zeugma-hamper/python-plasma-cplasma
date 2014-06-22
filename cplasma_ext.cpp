@@ -1,7 +1,7 @@
 
-// see http://www.boost.org/doc/libs/1_55_0/libs/python/doc/v2/numeric.html
+// (c) 2014 MCT
 
-#include <signal.h>
+#include <iostream>
 
 #include <libPlasma/c/pool.h>
 #include <libPlasma/c/protein.h>
@@ -150,6 +150,12 @@ class BSlaw {
     return dct;
   }
 
+  py::object emit_cons () const {
+    BSlaw car { slaw_cons_emit_car (slaw_) };
+    BSlaw cdr { slaw_cons_emit_cdr (slaw_) };
+    return py::make_tuple (car, cdr);
+  }
+
   py::object emit_numeric_vector_array () const {
     FOR_ALL_INTS(RETURN_IF_NUMARRAY,v2,slaw_);
     FOR_ALL_FLOATS(RETURN_IF_NUMARRAY,v2,slaw_);
@@ -187,6 +193,8 @@ class BSlaw {
       return emit_list ();
     } else if (slaw_is_map (slaw_)) {
       return emit_map ();
+    } else if (slaw_is_cons (slaw_)) {
+      return emit_cons ();
     } else if (slaw_is_numeric_vector (slaw_)) {
       if (slaw_is_numeric_array (slaw_)) {
         return emit_numeric_vector_array ();
@@ -221,6 +229,8 @@ class BProtein {
   BProtein (bprotein p) : pro { p } {}
   BSlaw ingests () const { return BSlaw (protein_ingests (pro)); }
   BSlaw descrips () const { return BSlaw (protein_descrips (pro)); }
+
+  protein dup () { return protein_dup (pro); }
 
   py::object emit () const {
     py::dict dct;
@@ -308,9 +318,9 @@ DECLARE_FLOATS(PREDECLARE_V2,);
 DECLARE_FLOATS(PREDECLARE_V3,);
 DECLARE_FLOATS(PREDECLARE_V4,);
 
-#define SLAW_FROM_NUMERIC(T)                            \
-  static Ref from_ ## T (T t) {                         \
-    return Ref(new Slaw (slaw_ ## T (t)));              \
+#define SLAW_FROM_NUMERIC(T)                                    \
+  static Ref from_ ## T (T t) {                                 \
+    return Ref(new Slaw (slaw_##T (t)));                        \
   }
 
 #define DECLARE_SLAW_FROM(T)                    \
@@ -350,8 +360,17 @@ class Slaw {
     return Ref(new Slaw (bs.dup()));
   }
 
+  static Ref fromBprotein (BProtein bp) {
+    return Ref (new Slaw (bp.dup()));
+  }
+
   static Ref from_string (std::string s) {
     return Ref(new Slaw (slaw_string (s.c_str())));
+  }
+
+  static Ref makeCons (Ref car, Ref cdr) {
+    return Ref (new Slaw (slaw_cons_ff (car -> take (),
+                                        cdr -> take ())));
   }
   
   DECLARE_INTS (SLAW_FROM_NUMERIC,);
@@ -367,13 +386,23 @@ class Slaw {
   DECLARE_FLOATS (SLAW_FROM_NUMERIC, v4);
 
   static Ref nil() { return Ref (new Slaw (slaw_nil())); }
-
+  
   static Ref from_obj(py::object &obj) {
-
     if (obj . is_none ()) {
       return nil();
     }
-    
+
+    PyObject* typ_ = PyObject_Type (obj . ptr ());
+    py::handle<> h (py::borrowed (typ_));
+    py::object typ (h);
+    py::extract<std::string> nam (typ);
+    if (nam . check ()) {
+      std::cerr << "having trouble with type "
+                << nam() << "\n";
+    } else {
+      std::cerr << "Could not coerce a type to a string\n";
+    }
+
     throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
 
@@ -557,12 +586,6 @@ class Hose {
       hose = nullptr; // belt, suspenders
       throw PlasmaException (tort);
     }
-    tort = pool_hose_enable_wakeup (hose);
-    if (0 > tort) {
-      pool_withdraw (hose);
-      hose = nullptr;
-      throw PlasmaException (tort);
-    }
   }
 
 
@@ -570,6 +593,10 @@ class Hose {
     if (nullptr != hose) {
       pool_withdraw (hose);
     }
+  }
+
+  void enableWakeup () {
+    THROW_ERROR_TORT(pool_hose_enable_wakeup (hose));
   }
 
   pool_hose peek () const { return hose; }
@@ -781,15 +808,6 @@ class Gang {
  private:
   pool_gang gang;
 
-  int64 hoseInGang (std::string name) {
-    for (int64 i = 0; i < count (); ++i) {
-      std::string h = pool_name (pool_gang_nth (gang, i));
-      if (h == name) {
-        return i;
-      }
-    }
-    return -1;
-  }
  public:
   Gang ()  :  gang (nullptr) {
     THROW_ERROR_TORT (pool_new_gang (&gang));    
@@ -801,24 +819,12 @@ class Gang {
     }
   }
 
-  void join (std::string name) {
-    if (-1 == hoseInGang (name)) {
-      pool_hose hose;
-      THROW_ERROR_TORT (pool_participate (name . c_str (), &hose, nullptr));
-      ob_retort tort = pool_join_gang (gang, hose);
-      if (0 > tort) {
-        pool_withdraw (hose);
-        throw PlasmaException (tort);
-      }
-    }        
+  void join (const Hose& hose) {
+    THROW_ERROR_TORT (pool_join_gang (gang, hose.peek ()));
   }
 
-  void leave (std::string name) {
-    int64 idx = hoseInGang (name);
-    if (-1 < idx) {
-      pool_hose hose = pool_gang_nth (gang, idx);
-      THROW_ERROR_TORT (pool_leave_gang(gang, hose));
-    }
+  void leave (const Hose& hose) {
+    THROW_ERROR_TORT (pool_leave_gang (gang, hose.peek ()));
   }
 
   int64 count () {
@@ -910,6 +916,7 @@ BOOST_PYTHON_MODULE(native)
       .def ("hoseName", &Hose::hoseName)
       .def ("setHoseName", &Hose::setHoseName)
       .def ("getInfo", &Hose::getInfo)
+      .def ("enableWakeup", &Hose::enableWakeup)
       
       .def ("rewind", &Hose::rewind)
       .def ("tolast", &Hose::tolast)
@@ -962,6 +969,7 @@ BOOST_PYTHON_MODULE(native)
       .def ("read", &Slaw::read)
       .def ("make", &Slaw::from_string)
       .def ("make", &Slaw::fromBslaw)
+      .def ("make", &Slaw::fromBprotein)
       DECLARE_INTS(DECLARE_SLAW_FROM,)
       DECLARE_FLOATS(DECLARE_SLAW_FROM,)
       DECLARE_INTS(DECLARE_SLAW_FROM, v2)
@@ -971,11 +979,12 @@ BOOST_PYTHON_MODULE(native)
       DECLARE_INTS(DECLARE_SLAW_FROM, v4)
       DECLARE_FLOATS(DECLARE_SLAW_FROM, v4)
       .def ("make", &Slaw::from_numpy)
-      .def ("make_array", &Slaw::from_numpy)
+      .def ("makeArray", &Slaw::from_numpy)
       .def ("nil", &Slaw::nil)
       .def ("makeProtein", &Slaw::makeProtein)
+      .def ("makeCons", &Slaw::makeCons)
       .staticmethod ("make")
-      .staticmethod ("make_array")
+      .staticmethod ("makeArray")
       .staticmethod ("nil")
       .staticmethod ("makeProtein")
       ;
