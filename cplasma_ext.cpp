@@ -208,7 +208,7 @@ class BSlaw {
     }
   }
 
-  unt64 list_count () const {
+  unt64 listCount () const {
     return slaw_list_count (slaw_);
   }
 };
@@ -548,7 +548,6 @@ class SlawBuilder {
 class Hose {
  private:
   pool_hose hose;
-
  public:
   Hose (std::string pool) : hose { nullptr } {
     ob_retort tort = pool_participate (pool . c_str (),
@@ -566,23 +565,89 @@ class Hose {
     }
   }
 
+
   virtual ~Hose () {
     if (nullptr != hose) {
       pool_withdraw (hose);
     }
   }
 
+  pool_hose peek () const { return hose; }
+
+  static void create(std::string name,
+                     std::string type,
+                     const Slaw& options) {
+    THROW_ERROR_TORT(pool_create (name . c_str (),
+                                  type . c_str (),
+                                  options . peek()));
+  }
+
+  static void dispose(std::string name) {
+    THROW_ERROR_TORT(pool_dispose (name . c_str ()));
+  }
+
+  static void rename (std::string old_name, std::string new_name) {
+    THROW_ERROR_TORT (pool_rename (old_name . c_str (),
+                                   new_name . c_str ()));
+  }
+
+  static bool exists (std::string name) {
+    return OB_OK == pool_exists (name . c_str ());
+  }
+
+  static bool validateName (std::string name) {
+    return OB_OK == pool_validate_name (name . c_str ());
+  }
+
+  static void sleep (std::string name) {
+    THROW_ERROR_TORT (pool_sleep (name . c_str ()));
+  }
+
+  static bool checkInUse(std::string name) {
+    return POOL_IN_USE == pool_check_in_use (name . c_str ());
+  }
+
+  static py::object listPools () {
+    slaw s;
+    THROW_ERROR_TORT (pool_list (&s));
+    py::object out = BSlaw (s) . emit ();
+    slaw_free (s);
+    return out;
+  }
+
+  static py::object listPoolsEx(std::string prefix) {
+    slaw s;
+    THROW_ERROR_TORT (pool_list_ex (prefix . c_str (), &s));
+    py::object out = BSlaw (s) . emit ();
+    slaw_free (s);
+    return out;
+  }    
+  
   const char* name() const {
     return pool_name (hose);
   }
 
-  int64 newest_index() const {
+  const char* hoseName() const {
+    return pool_get_hose_name (hose);
+  }
+
+  void setHoseName (std::string str) {
+    THROW_ERROR_TORT (pool_set_hose_name (hose, str . c_str ()));
+  }
+
+  BProtein getInfo (int64 hops) {
+    protein pro;
+    THROW_ERROR_TORT (pool_get_info (hose, hops, &pro));
+    return BProtein (pro);
+  }
+
+  int64 newestIndex() const {
     int64 out;
     THROW_ERROR_TORT(pool_newest_index(hose, &out));
     return out;
   }
 
-  int64 oldest_index() const {
+  int64 oldestIndex() const {
     int64 out;
     THROW_ERROR_TORT(pool_oldest_index(hose, &out));
     return out;
@@ -608,7 +673,84 @@ class Hose {
     }
   }
 
-  py::object await_next(pool_timestamp timeout) {
+  py::object next () {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    int64 index;
+
+    ob_retort tort = pool_next (hose, &pro, &ts, &index);
+    if (POOL_NO_SUCH_PROTEIN == tort) {
+      return py::object ();
+    }
+    if (0 > tort) {
+      throw PlasmaException (tort);
+    }
+
+    return py::make_tuple (BProtein (pro), index, ts);
+  }
+
+  py::object prev() {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    int64 index;
+
+    ob_retort tort = pool_prev (hose, &pro, &ts, &index);
+    if (POOL_NO_SUCH_PROTEIN == tort) {
+      return py::object ();
+    }
+    if (0 > tort) {
+      throw PlasmaException (tort);
+    }
+
+    return py::make_tuple (BProtein (pro), index, ts);
+  }
+
+  py::object nth(int64 idx) {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    // POOL_NO_SUCH_PROTEIN is actually exceptional in this case
+    THROW_ERROR_TORT (pool_nth_protein (hose, idx, &pro, &ts));
+    return py::make_tuple (BProtein (pro), idx, ts);
+  }
+
+  py::object probeForward (const Slaw& s) {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    int64 idx;
+    if (OB_OK == pool_probe_frwd (hose, s . peek (),
+                                  &pro, &ts, &idx)) {
+      return py::make_tuple (BProtein (pro), idx, ts);
+    } else {
+      return py::object ();
+    }
+  }
+
+  py::object probeForwardAwait (const Slaw& s, const pool_timestamp timeout) {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    int64 idx;
+    if (OB_OK == pool_await_probe_frwd (hose, s . peek (),
+                                        timeout,
+                                        &pro, &ts, &idx)) {
+      return py::make_tuple (BProtein (pro), idx, ts);
+    } else {
+      return py::object ();
+    }
+  }
+
+  py::object probeBack (const Slaw& s) {
+    protein pro = nullptr;
+    pool_timestamp ts;
+    int64 idx;
+    if (OB_OK == pool_probe_back (hose, s . peek (),
+                                  &pro, &ts, &idx)) {
+      return py::make_tuple (BProtein (pro), idx, ts);
+    } else {
+      return py::object ();
+    }
+  }
+
+  py::object awaitNext(pool_timestamp timeout) {
     protein pro = nullptr;
     pool_timestamp ts;
     int64 index;
@@ -623,6 +765,7 @@ class Hose {
  
     return py::make_tuple (BProtein (pro), index, ts);
   }
+  py::object awaitNextForever() { return awaitNext (POOL_WAIT_FOREVER); }
 
   int64 deposit(const Slaw& pro) {
     if (! pro . isProtein ()) {
@@ -632,8 +775,85 @@ class Hose {
     THROW_ERROR_TORT(pool_deposit (hose, pro . peek (), &idx));
     return idx;
   }
+};
 
-  py::object await_next_forever() { return await_next (POOL_WAIT_FOREVER); }
+class Gang {
+ private:
+  pool_gang gang;
+
+  int64 hoseInGang (std::string name) {
+    for (int64 i = 0; i < count (); ++i) {
+      std::string h = pool_name (pool_gang_nth (gang, i));
+      if (h == name) {
+        return i;
+      }
+    }
+    return -1;
+  }
+ public:
+  Gang ()  :  gang (nullptr) {
+    THROW_ERROR_TORT (pool_new_gang (&gang));    
+  }
+
+  ~Gang () {
+    if (nullptr != gang) {
+      THROW_ERROR_TORT (pool_disband_gang (gang, true));
+    }
+  }
+
+  void join (std::string name) {
+    if (-1 == hoseInGang (name)) {
+      pool_hose hose;
+      THROW_ERROR_TORT (pool_participate (name . c_str (), &hose, nullptr));
+      ob_retort tort = pool_join_gang (gang, hose);
+      if (0 > tort) {
+        pool_withdraw (hose);
+        throw PlasmaException (tort);
+      }
+    }        
+  }
+
+  void leave (std::string name) {
+    int64 idx = hoseInGang (name);
+    if (-1 < idx) {
+      pool_hose hose = pool_gang_nth (gang, idx);
+      THROW_ERROR_TORT (pool_leave_gang(gang, hose));
+    }
+  }
+
+  int64 count () {
+    return pool_gang_count (gang);
+  }
+
+  py::object nthHose (const int64 idx) {
+    pool_hose hose = pool_gang_nth (gang, idx);
+    if (nullptr != hose) {
+      return py::object (pool_name (hose));
+    } else {
+      return py::object ();
+    }
+  }
+
+  py::object awaitNext(pool_timestamp timeout) {
+    pool_hose ph;
+    protein pro;
+    pool_timestamp ts;
+    int64 idx;
+
+    ob_retort tort = pool_await_next_multi (gang, timeout,
+                                            &ph, &pro, &ts, &idx);
+    if (OB_OK == tort) {
+      return py::make_tuple(BProtein (pro), idx, ts, pool_name (ph));
+    } else {
+      if (0 > tort) {
+        throw PlasmaException (tort);
+      }
+      return py::object ();
+    }
+  }
+
+  py::object awaitNextForever() { return awaitNext (POOL_WAIT_FOREVER); }
+  py::object next() { return awaitNext (0.0); }
 };
 
 static PyObject *plasmaExceptionType = nullptr;
@@ -643,7 +863,7 @@ void translatePlasmaException (PlasmaException const& e)
   PyErr_SetObject(plasmaExceptionType, pythonExceptionInstance.ptr());
 }
 
-BOOST_PYTHON_MODULE(cplasma_ext)
+BOOST_PYTHON_MODULE(native)
 { py::class_<PlasmaException>
       plasmaExceptionClass ("PlasmaException",
                             py::init<ob_retort> ());
@@ -666,7 +886,7 @@ BOOST_PYTHON_MODULE(cplasma_ext)
       bslawClass ("BSlaw", py::no_init);
 
   bslawClass
-      .add_property ("list_count", &BSlaw::list_count)
+      .add_property ("listCount", &BSlaw::listCount)
       .def ("emit", &BSlaw::emit)
       ;
 
@@ -683,23 +903,55 @@ BOOST_PYTHON_MODULE(cplasma_ext)
       hoseClass ("Hose", py::init<std::string> ());
 
   hoseClass
-      .add_property("newest_index", &Hose::newest_index)
-      .add_property("oldest_index", &Hose::oldest_index)
+      .add_property("newestIndex", &Hose::newestIndex)
+      .add_property("oldestIndex", &Hose::oldestIndex)
       .add_property("index", &Hose::index)
       .add_property("name", &Hose::name)
-
+      .def ("hoseName", &Hose::hoseName)
+      .def ("setHoseName", &Hose::setHoseName)
+      .def ("getInfo", &Hose::getInfo)
+      
       .def ("rewind", &Hose::rewind)
       .def ("tolast", &Hose::tolast)
       .def ("runout", &Hose::runout)
       .def ("frwdby", &Hose::frwdby)
       .def ("backby", &Hose::backby)
       .def ("seekto", &Hose::seekto)
-      
-      .def ("await_next", &Hose::await_next)
-      .def ("await_next", &Hose::await_next_forever)
+
+      .def ("nth", &Hose::nth)
+      .def ("next", &Hose::next)
+      .def ("prev", &Hose::prev)
+      .def ("awaitNext", &Hose::awaitNext)
+      .def ("awaitNext", &Hose::awaitNextForever)
+      .def ("probeForward", &Hose::probeForward)
+      .def ("probeForwardAwait", &Hose::probeForwardAwait)
+      .def ("probeBack", &Hose::probeBack)
 
       .def ("wakeup", &Hose::wakeup)
       .def ("deposit", &Hose::deposit)
+
+      .def ("create", &Hose::create) . staticmethod ("create")
+      .def ("dispose", &Hose::dispose) . staticmethod ("dispose")
+      .def ("rename", &Hose::rename) . staticmethod ("rename")
+      .def ("exists", &Hose::exists) . staticmethod ("exists")
+      .def ("validateName", &Hose::validateName) . staticmethod ("validateName")
+      .def ("sleep", &Hose::sleep) . staticmethod ("sleep")
+      .def ("checkInUse", &Hose::checkInUse) . staticmethod ("checkInUse")
+      .def ("listPools", &Hose::listPools) . staticmethod ("listPools")
+      .def ("listPoolsEx", &Hose::listPools) . staticmethod ("listPoolsEx")
+      ;
+
+  py::class_<Gang>
+      gangClass ("Gang");
+
+  gangClass
+      .def ("join", &Gang::join)
+      .def ("leave", &Gang::leave)
+      .def ("count", &Gang::count)
+      .def ("awaitNext", &Gang::awaitNext)
+      .def ("awaitNext", &Gang::awaitNextForever)
+      .def ("next", &Gang::next)
+      .def ("nthHose", &Gang::nthHose)
       ;
 
   py::class_<Slaw, boost::shared_ptr<Slaw> >

@@ -30,7 +30,7 @@ def cplasma_extension():
     compiler_args = subprocess.check_output(['pkg-config', '--cflags', 'libPlasma'])
     linker_args = subprocess.check_output(['pkg-config', '--libs', 'libPlasma'])
 
-    return Extension('cplasma_ext',
+    return Extension('cplasma.native',
                      sources = ['cplasma_ext.cpp'],
                      libraries = ['boost_python'],
                      include_dirs = [numpy.get_include()],
@@ -38,15 +38,14 @@ def cplasma_extension():
                      extra_link_args = linker_args.split())
 
 
-setup(name = 'cplasma',
-      version = '0.1',
-      author = 'Corey Porter',
+setup(name         = 'cplasma',
+      version      = '0.1',
+      author       = 'Corey Porter',
       author_email = 'cp@mct.io',
-      description = "native binding to Oblong's plasma library",
-      license = 'Proprietary',
-      keywords = 'plasma',
-      url = 'http://mct.io/',
-      packages = ['cplasma'],
-      ext_modules = [cplasma_extension()],
-      install_requires = ['numpy'],
-      requires = ['numpy'])
+      description  = "native binding to Oblong's plasma library",
+      license      = "Entirely proprietary. Don't even think of it",
+      keywords     = 'plasma',
+      url          = 'http://mct.io/',
+      packages     = ['cplasma'],
+      ext_modules  = [cplasma_extension()],
+      requires     = ['numpy'])
