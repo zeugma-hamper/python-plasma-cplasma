@@ -74,15 +74,97 @@ template <typename T> struct array_writer {};
       }                                         \
   } while (false)
 
+namespace detail {
+
+// numpy info.  For each ob numeric type, there's a corresponding
+// specialization of the numpy_info<> struct that has one const
+// and two functions:
+// - typenum: the numpy type identifier that corresponds to the ob type
+// - ND(), which returns the number of dimensions the array shall have
+// - Dims (), which returns an array describing these dimensions in
+//   numpy's preferred format.
+
+template <typename T> struct numpy_info { };
+#define DEFINE_NUMPY_INFO(T, NT, DIMS)                          \
+  template <> struct numpy_info<T> {                            \
+    static const int typenum() { return NT; }                   \
+    static const int ND() { return  DIMS > 1 ? 2 : 1; }         \
+    static std::vector<npy_intp> Dims (int64 len) {             \
+      std::vector<npy_intp> out = { npy_intp(len) };            \
+      if (DIMS > 1) {                                           \
+        out . push_back (DIMS);                                 \
+      }                                                         \
+      return out;                                               \
+    }                                                           \
+  }
+
+DEFINE_NUMPY_INFO(unt8, NPY_UINT8, 1);
+DEFINE_NUMPY_INFO(int8, NPY_INT8, 1);
+DEFINE_NUMPY_INFO(unt16, NPY_UINT16, 1);
+DEFINE_NUMPY_INFO(int16, NPY_INT16, 1);
+DEFINE_NUMPY_INFO(unt32, NPY_UINT32, 1);
+DEFINE_NUMPY_INFO(int32, NPY_INT32, 1);
+DEFINE_NUMPY_INFO(unt64, NPY_UINT64, 1);
+DEFINE_NUMPY_INFO(int64, NPY_INT64, 1);
+DEFINE_NUMPY_INFO(float32, NPY_FLOAT32, 1);
+DEFINE_NUMPY_INFO(float64, NPY_FLOAT64, 1);
+
+DEFINE_NUMPY_INFO(v2unt8, NPY_UINT8, 2);
+DEFINE_NUMPY_INFO(v2int8, NPY_INT8, 2);
+DEFINE_NUMPY_INFO(v2unt16, NPY_UINT16, 2);
+DEFINE_NUMPY_INFO(v2int16, NPY_INT16, 2);
+DEFINE_NUMPY_INFO(v2unt32, NPY_UINT32, 2);
+DEFINE_NUMPY_INFO(v2int32, NPY_INT32, 2);
+DEFINE_NUMPY_INFO(v2unt64, NPY_UINT64, 2);
+DEFINE_NUMPY_INFO(v2int64, NPY_INT64, 2);
+DEFINE_NUMPY_INFO(v2float32, NPY_FLOAT32, 2);
+DEFINE_NUMPY_INFO(v2float64, NPY_FLOAT64, 2);
+
+DEFINE_NUMPY_INFO(v3unt8, NPY_UINT8, 3);
+DEFINE_NUMPY_INFO(v3int8, NPY_INT8, 3);
+DEFINE_NUMPY_INFO(v3unt16, NPY_UINT16, 3);
+DEFINE_NUMPY_INFO(v3int16, NPY_INT16, 3);
+DEFINE_NUMPY_INFO(v3unt32, NPY_UINT32, 3);
+DEFINE_NUMPY_INFO(v3int32, NPY_INT32, 3);
+DEFINE_NUMPY_INFO(v3unt64, NPY_UINT64, 3);
+DEFINE_NUMPY_INFO(v3int64, NPY_INT64, 3);
+DEFINE_NUMPY_INFO(v3float32, NPY_FLOAT32, 3);
+DEFINE_NUMPY_INFO(v3float64, NPY_FLOAT64, 3);
+
+DEFINE_NUMPY_INFO(v4unt8, NPY_UINT8, 4);
+DEFINE_NUMPY_INFO(v4int8, NPY_INT8, 4);
+DEFINE_NUMPY_INFO(v4unt16, NPY_UINT16, 4);
+DEFINE_NUMPY_INFO(v4int16, NPY_INT16, 4);
+DEFINE_NUMPY_INFO(v4unt32, NPY_UINT32, 4);
+DEFINE_NUMPY_INFO(v4int32, NPY_INT32, 4);
+DEFINE_NUMPY_INFO(v4unt64, NPY_UINT64, 4);
+DEFINE_NUMPY_INFO(v4int64, NPY_INT64, 4);
+DEFINE_NUMPY_INFO(v4float32, NPY_FLOAT32, 4);
+DEFINE_NUMPY_INFO(v4float64, NPY_FLOAT64, 4);
+
+template <typename T>
+py::object makeNumpyArray (const T* data, int64 len) {
+  std::vector<npy_intp> dims = detail::numpy_info<T>::Dims (len);
+  int nd = numpy_info<T>::ND ();
+  int typenum = numpy_info<T>::typenum ();
+  PyObject* src = PyArray_SimpleNewFromData
+      (nd, &dims[0], typenum, (void*) data);
+  py::handle<> mort (src);
+  PyObject* arr_ = PyArray_EMPTY (nd, &dims[0], typenum, 0);
+  PyArray_CopyInto (reinterpret_cast<PyArrayObject*>(arr_),
+                    reinterpret_cast<PyArrayObject*>(src));  
+  py::handle<> h(arr_);
+  py::object arr(h);
+  return arr;
+}
+
+}
+
 #define RETURN_IF_NUMARRAY(TYP, s) do {                          \
     if (slaw_is_ ## TYP ## _array (s)) {                         \
       const TYP *tmp = slaw_ ## TYP ## _array_emit (s);          \
-          const int64 N = slaw_numeric_array_count (s);          \
-          py::list lst;                                          \
-          for (int64 i = 0; i < N; ++i) {                        \
-            lst.append(tmp[i]);                                  \
-          }                                                      \
-          return lst;                                            \
+      const int64 N = slaw_numeric_array_count (s);              \
+      return detail::makeNumpyArray<TYP>(tmp, N);                \
     }                                                            \
   } while (false)
 
@@ -999,5 +1081,6 @@ BOOST_PYTHON_MODULE(native)
       .def ("mapPut", &SlawBuilder::mapPut)
       ;
 
+  import_array (); // <- If you don't call this, numpy functions will segfault
   py::numeric::array::set_module_and_type("numpy", "ndarray");
 }

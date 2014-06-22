@@ -21,7 +21,7 @@ def Slaw(x):
         # `native.Slaw`.
         return x.toSlaw()
     elif isinstance(x, numpy.ndarray):
-        return slaw.Slaw.makeArray(x)
+        return native.Slaw.makeArray(x)
     elif isinstance(x, dict):
         bu = native.SlawBuilder()
         for k, v in x.iteritems():
@@ -59,7 +59,6 @@ def Slaw(x):
         # types. We currently don't have a way to deal with arbitrary
         # classes and whatnot
         return native.Slaw.make(x)
-            
 
 def Protein(des, ing):
     'Create a write-only protein for depositing purposes'
