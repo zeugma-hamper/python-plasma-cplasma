@@ -8,7 +8,6 @@ import numpy
 
 POOL_WAIT_FOREVER = -1.0
 
-
 def Slaw(x):
     'Turn an object in to a Slaw that you can send over a hose'
     # x = compat.loam_conv(x)
@@ -73,6 +72,10 @@ def QID(qid):
 class Hose(object):
     def __init__(self, pool, options = None):
         self.__hose = native.Hose(pool)
+
+    def _native_hose(self):
+        "You probably don't want to."
+        return self.__hose
         
     ## --------------------- ##
     ## Creation and Disposal ##
@@ -614,13 +617,13 @@ class Hose(object):
         """
         Convenience method for HoseGang.add_hose
         """
-        gang.add_hose(self.name())        
+        gang.add_hose(self)        
 
     def leave_gang(self, gang):
         """
         Convenience method for HoseGang.remove_hose
         """
-        gang.remove_hose(self.name())
+        gang.remove_hose(self)
 
 class HoseGang(object):
     """
@@ -638,8 +641,8 @@ class HoseGang(object):
         """
         if isinstance(hose, (str, unicode)):
             hose = Hose.participate(hose)
-        self.__gang.join(hose)
-        self.__hoses.append(hose)        
+            self.__hoses.append(hose)
+        self.__gang.join(hose._native_hose())
     
     def remote_hose(self, hose):
         """
@@ -651,7 +654,7 @@ class HoseGang(object):
             if 1 != len(candidates):
                 raise LookupError('No hose named %s in this gang' % hose)
             hose = candidates[0]
-        self.__gang.leave(hose)
+        self.__gang.leave(hose._native_hose())
         self.__hoses.remove(hose)
 
     def withdraw(self):

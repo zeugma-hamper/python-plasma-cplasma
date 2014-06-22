@@ -14,6 +14,9 @@
 #include <string>
 #include <vector>
 
+#include "horrible_macros.hpp"
+
+
 namespace py = boost::python;
 
 class PlasmaException : public std::exception {
@@ -27,52 +30,7 @@ class PlasmaException : public std::exception {
   const ob_retort retort() const { return tort; }
 };
 
-#define THROW_ERROR_TORT(expr) do {             \
-    ob_retort tort = expr;                      \
-    if (0 > tort) {                             \
-      throw PlasmaException (tort);             \
-    }                                           \
-  } while (false)
-
-
-#define DECLARE_INTS(M, PRE)                         \
-  M(PRE##unt8)                                       \
-  M(PRE##int8)                                       \
-  M(PRE##unt16)                                      \
-  M(PRE##int16)                                      \
-  M(PRE##unt32)                                      \
-  M(PRE##int32)                                      \
-  M(PRE##unt64)                                      \
-  M(PRE##int64)
-
-#define DECLARE_FLOATS(M, PRE)                  \
-  M(PRE##float32)                               \
-  M(PRE##float64)
-
-
 template <typename T> struct array_writer {};
-
-#define FOR_ALL_INTS(M, PRE, s)                 \
-  M (PRE ## unt8, s);                           \
-  M (PRE ## int8, s);                           \
-  M (PRE ## unt16, s);                          \
-  M (PRE ## int16, s);                          \
-  M (PRE ## unt32, s);                          \
-  M (PRE ## int32, s);                          \
-  M (PRE ## unt64, s);                          \
-  M (PRE ## int64, s);
-
-#define FOR_ALL_FLOATS(M, PRE, s)               \
-  M (PRE ## float32, s);                        \
-  M (PRE ## float64, s);
-
-#define RETURN_IF_NUMERIC(TYP, s) do {          \
-    if (slaw_is_ ## TYP (s)) {                  \
-      const TYP *tmp;                           \
-      tmp = slaw_ ## TYP ## _emit (s);          \
-      return py::object (*tmp);                 \
-      }                                         \
-  } while (false)
 
 namespace detail {
 
@@ -85,18 +43,6 @@ namespace detail {
 //   numpy's preferred format.
 
 template <typename T> struct numpy_info { };
-#define DEFINE_NUMPY_INFO(T, NT, DIMS)                          \
-  template <> struct numpy_info<T> {                            \
-    static const int typenum() { return NT; }                   \
-    static const int ND() { return  DIMS > 1 ? 2 : 1; }         \
-    static std::vector<npy_intp> Dims (int64 len) {             \
-      std::vector<npy_intp> out = { npy_intp(len) };            \
-      if (DIMS > 1) {                                           \
-        out . push_back (DIMS);                                 \
-      }                                                         \
-      return out;                                               \
-    }                                                           \
-  }
 
 DEFINE_NUMPY_INFO(unt8, NPY_UINT8, 1);
 DEFINE_NUMPY_INFO(int8, NPY_INT8, 1);
@@ -159,46 +105,6 @@ py::object makeNumpyArray (const T* data, int64 len) {
 }
 
 }
-
-#define RETURN_IF_NUMARRAY(TYP, s) do {                          \
-    if (slaw_is_ ## TYP ## _array (s)) {                         \
-      const TYP *tmp = slaw_ ## TYP ## _array_emit (s);          \
-      const int64 N = slaw_numeric_array_count (s);              \
-      return detail::makeNumpyArray<TYP>(tmp, N);                \
-    }                                                            \
-  } while (false)
-
-#define RETURN_IF_V2(TYP, s) do {               \
-    if (slaw_is_v2 ## TYP (s)) {                \
-      auto ptr = slaw_v2 ## TYP ## _emit (s);   \
-          py::list lst;                         \
-          lst.append(ptr -> x);                 \
-          lst.append(ptr -> y);                 \
-          return lst;                           \
-    }                                           \
-  } while (false)
-
-#define RETURN_IF_V3(TYP, s) do {               \
-    if (slaw_is_v3 ## TYP (s)) {                \
-      auto ptr = slaw_v3 ## TYP ## _emit (s);   \
-          py::object ret(*ptr);                 \
-          return ret;                           \
-    }                                           \
-  } while (false)
-
-
-#define RETURN_IF_V4(TYP, s) do {               \
-    if (slaw_is_v4 ## TYP (s)) {                \
-      auto ptr = slaw_v4 ## TYP ## _emit (s);   \
-          py::list lst;                         \
-          lst.append(ptr -> x);                 \
-          lst.append(ptr -> y);                 \
-          lst.append(ptr -> z);                 \
-          lst.append(ptr -> w);                 \
-          return lst;                           \
-    }                                           \
-  } while (false)
-      
 
 class BSlaw {
  private:
@@ -322,93 +228,6 @@ class BProtein {
   }
 };
 
-#define STR(X) #X
-
-#define PREDECLARE_V2(T)                            \
-  v2##T make_v2##T (T x, T y) {                     \
-    v2##T out = { x, y };                           \
-        return out;                                 \
-  }                                                 \
-  std::string repr_v2##T (const v2##T& v) {         \
-    std::stringstream out;                          \
-    out << STR(v2##T) << '('                        \
-    << v.x << ',' << v.y << ')';                    \
-    return out.str();                               \
-  }
-
-#define PREDECLARE_V3(T)                            \
-  v3##T make_v3##T (T x, T y, T z) {                \
-    v3##T out = { x, y, z };                        \
-        return out;                                 \
-  }                                                 \
-  std::string repr_v3##T (const v3##T& v) {         \
-    std::stringstream out;                          \
-    out << STR(v3##T) << '('                        \
-    << v.x << ','                                   \
-    << v.y << ','                                   \
-    << v.z << ')';                                  \
-    return out.str();                               \
-  }
-
-#define PREDECLARE_V4(T)                            \
-  v4##T make_v4##T (T x, T y, T z, T w) {           \
-    v4##T out = { x, y, z, w };                     \
-        return out;                                 \
-  }                                                 \
-  std::string repr_v4##T (const v4##T& v) {         \
-    std::stringstream out;                          \
-    out << STR(v4##T) << '('                        \
-    << v.x << ','                                   \
-    << v.y << ','                                   \
-    << v.z << ','                                   \
-    << v.w << ')';                                  \
-    return out.str();                               \
-  }
-
-#define DECLARE_V2(T)                               \
-  py::class_<v2##T> (STR(v2##T))                    \
-  .def_readwrite("x", &v2##T::x)                    \
-  .def_readwrite("y", &v2##T::y)                    \
-  .def("__repr__", &repr_v2##T)                     \
-  .def("make", &make_v2##T).staticmethod("make")    \
-  ;
-
-#define DECLARE_V3(T)                               \
-  py::class_<v3##T> (STR(v3##T))                    \
-  .def_readwrite("x", &v3##T::x)                    \
-  .def_readwrite("y", &v3##T::y)                    \
-  .def_readwrite("z", &v3##T::z)                    \
-  .def("__repr__", &repr_v3##T)                     \
-  .def("make", &make_v3##T).staticmethod("make")    \
-  ;
-
-#define DECLARE_V4(T)                               \
-  py::class_<v4##T> (STR(v4##T))                    \
-  .def_readwrite("x", &v4##T::x)                    \
-  .def_readwrite("y", &v4##T::y)                    \
-  .def_readwrite("z", &v4##T::z)                    \
-  .def_readwrite("w", &v4##T::w)                    \
-  .def("__repr__", &repr_v4##T)                     \
-  .def("make", &make_v4##T).staticmethod("make")    \
-  ;
-
-
-DECLARE_INTS(PREDECLARE_V2,);
-DECLARE_INTS(PREDECLARE_V3,);
-DECLARE_INTS(PREDECLARE_V4,);
-DECLARE_FLOATS(PREDECLARE_V2,);
-DECLARE_FLOATS(PREDECLARE_V3,);
-DECLARE_FLOATS(PREDECLARE_V4,);
-
-#define SLAW_FROM_NUMERIC(T)                                    \
-  static Ref from_ ## T (T t) {                                 \
-    return Ref(new Slaw (slaw_##T (t)));                        \
-  }
-
-#define DECLARE_SLAW_FROM(T)                    \
-  .def("make", &Slaw::from_ ##T)                \
-  .def(STR(make_ ## T), &Slaw::from_ ##T)       \
-  .staticmethod(STR(make_ ## T))
 
 class Slaw {
  private:
@@ -488,31 +307,6 @@ class Slaw {
     throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
 
-#define NPYARR_SINGLE(NPYTYP, OBTYP)                            \
-  if (typ == NPYTYP) {                                          \
-    OBTYP* data = reinterpret_cast<OBTYP*> (buffer);            \
-    return Ref(new Slaw (slaw_##OBTYP##_array(data, len)));     \
-  }
-
-
-#define NPYARR_DOUBLE(NPYTYP, OBTYP)                                    \
-  if (typ == NPYTYP) {                                                  \
-    v2##OBTYP* data = reinterpret_cast<v2##OBTYP*> (buffer);            \
-        return Ref(new Slaw (slaw_v2##OBTYP##_array(data, len)));       \
-  }
-
-#define NPYARR_TRIPLE(NPYTYP, OBTYP)                                    \
-  if (typ == NPYTYP) {                                                  \
-    v3##OBTYP* data = reinterpret_cast<v3##OBTYP*> (buffer);            \
-        return Ref(new Slaw (slaw_v3##OBTYP##_array(data, len)));       \
-  }
-
-
-#define NPYARR_QUAD(NPYTYP, OBTYP)                                      \
-  if (typ == NPYTYP) {                                                  \
-    v4##OBTYP* data = reinterpret_cast<v4##OBTYP*> (buffer);            \
-        return Ref(new Slaw (slaw_v4##OBTYP##_array(data, len)));       \
-  }
 
   static Ref _from_numpy(const py::numeric::array& arr, size_t len) {
     const int typ = PyArray_TYPE(arr.ptr());
@@ -701,7 +495,7 @@ class Hose {
   }
 
   static bool exists (std::string name) {
-    return OB_OK == pool_exists (name . c_str ());
+    return OB_YES == pool_exists (name . c_str ());
   }
 
   static bool validateName (std::string name) {
@@ -897,7 +691,7 @@ class Gang {
 
   ~Gang () {
     if (nullptr != gang) {
-      THROW_ERROR_TORT (pool_disband_gang (gang, true));
+      THROW_ERROR_TORT (pool_disband_gang (gang, false));
     }
   }
 
@@ -951,6 +745,56 @@ void translatePlasmaException (PlasmaException const& e)
   PyErr_SetObject(plasmaExceptionType, pythonExceptionInstance.ptr());
 }
 
+
+// Numeric conversion types of vNtypeBits types.
+template <typename V, int VSIZE, int NPYTYP>
+struct vtype_to_python_obj {
+  static PyObject* convert (V const& v) {
+    npy_intp dim = VSIZE;
+    // Yes, we're treating the vector type as an array. Intentionally.
+    PyObject* src = PyArray_SimpleNewFromData
+        (1, &dim, NPYTYP, (void*) &v);
+    PyObject* arr = PyArray_EMPTY(1, &dim, NPYTYP, 0);
+    PyArray_CopyInto (reinterpret_cast<PyArrayObject*> (arr),
+                      reinterpret_cast<PyArrayObject*> (src));
+    return py::incref(arr);
+  }
+};
+
+DECLARE_VECT_CONVERTER(unt8, 2, NPY_UINT8);
+DECLARE_VECT_CONVERTER(int8, 2, NPY_INT8);
+DECLARE_VECT_CONVERTER(unt16, 2, NPY_UINT16);
+DECLARE_VECT_CONVERTER(int16, 2, NPY_INT16);
+DECLARE_VECT_CONVERTER(unt32, 2, NPY_UINT32);
+DECLARE_VECT_CONVERTER(int32, 2, NPY_INT32);
+DECLARE_VECT_CONVERTER(unt64, 2, NPY_UINT64);
+DECLARE_VECT_CONVERTER(int64, 2, NPY_INT64);
+DECLARE_VECT_CONVERTER(float32, 2, NPY_FLOAT32);
+DECLARE_VECT_CONVERTER(float64, 2, NPY_FLOAT64);
+
+DECLARE_VECT_CONVERTER(unt8, 3, NPY_UINT8);
+DECLARE_VECT_CONVERTER(int8, 3, NPY_INT8);
+DECLARE_VECT_CONVERTER(unt16, 3, NPY_UINT16);
+DECLARE_VECT_CONVERTER(int16, 3, NPY_INT16);
+DECLARE_VECT_CONVERTER(unt32, 3, NPY_UINT32);
+DECLARE_VECT_CONVERTER(int32, 3, NPY_INT32);
+DECLARE_VECT_CONVERTER(unt64, 3, NPY_UINT64);
+DECLARE_VECT_CONVERTER(int64, 3, NPY_INT64);
+DECLARE_VECT_CONVERTER(float32, 3, NPY_FLOAT32);
+DECLARE_VECT_CONVERTER(float64, 3, NPY_FLOAT64);
+
+DECLARE_VECT_CONVERTER(unt8, 4, NPY_UINT8);
+DECLARE_VECT_CONVERTER(int8, 4, NPY_INT8);
+DECLARE_VECT_CONVERTER(unt16, 4, NPY_UINT16);
+DECLARE_VECT_CONVERTER(int16, 4, NPY_INT16);
+DECLARE_VECT_CONVERTER(unt32, 4, NPY_UINT32);
+DECLARE_VECT_CONVERTER(int32, 4, NPY_INT32);
+DECLARE_VECT_CONVERTER(unt64, 4, NPY_UINT64);
+DECLARE_VECT_CONVERTER(int64, 4, NPY_INT64);
+DECLARE_VECT_CONVERTER(float32, 4, NPY_FLOAT32);
+DECLARE_VECT_CONVERTER(float64, 4, NPY_FLOAT64);
+
+
 BOOST_PYTHON_MODULE(native)
 { py::class_<PlasmaException>
       plasmaExceptionClass ("PlasmaException",
@@ -961,14 +805,6 @@ BOOST_PYTHON_MODULE(native)
   plasmaExceptionType = plasmaExceptionClass . ptr ();
   py::register_exception_translator<PlasmaException>
       (&translatePlasmaException);
-
-  // Give us our nice, juicy v{2,3,4}TYPE types
-  DECLARE_INTS(DECLARE_V2,);
-  DECLARE_INTS(DECLARE_V3,);
-  DECLARE_INTS(DECLARE_V4,);
-  DECLARE_FLOATS(DECLARE_V2,);
-  DECLARE_FLOATS(DECLARE_V3,);
-  DECLARE_FLOATS(DECLARE_V4,);
 
   py::class_<BSlaw>
       bslawClass ("BSlaw", py::no_init);
@@ -1083,4 +919,38 @@ BOOST_PYTHON_MODULE(native)
 
   import_array (); // <- If you don't call this, numpy functions will segfault
   py::numeric::array::set_module_and_type("numpy", "ndarray");
+
+  REGISTER_VECT_CONVERTER(unt8, 2, NPY_UINT8);
+  REGISTER_VECT_CONVERTER(int8, 2, NPY_INT8);
+  REGISTER_VECT_CONVERTER(unt16, 2, NPY_UINT16);
+  REGISTER_VECT_CONVERTER(int16, 2, NPY_INT16);
+  REGISTER_VECT_CONVERTER(unt32, 2, NPY_UINT32);
+  REGISTER_VECT_CONVERTER(int32, 2, NPY_INT32);
+  REGISTER_VECT_CONVERTER(unt64, 2, NPY_UINT64);
+  REGISTER_VECT_CONVERTER(int64, 2, NPY_INT64);
+  REGISTER_VECT_CONVERTER(float32, 2, NPY_FLOAT32);
+  REGISTER_VECT_CONVERTER(float64, 2, NPY_FLOAT64);
+  
+  REGISTER_VECT_CONVERTER(unt8, 3, NPY_UINT8);
+  REGISTER_VECT_CONVERTER(int8, 3, NPY_INT8);
+  REGISTER_VECT_CONVERTER(unt16, 3, NPY_UINT16);
+  REGISTER_VECT_CONVERTER(int16, 3, NPY_INT16);
+  REGISTER_VECT_CONVERTER(unt32, 3, NPY_UINT32);
+  REGISTER_VECT_CONVERTER(int32, 3, NPY_INT32);
+  REGISTER_VECT_CONVERTER(unt64, 3, NPY_UINT64);
+  REGISTER_VECT_CONVERTER(int64, 3, NPY_INT64);
+  REGISTER_VECT_CONVERTER(float32, 3, NPY_FLOAT32);
+  REGISTER_VECT_CONVERTER(float64, 3, NPY_FLOAT64);
+  
+  REGISTER_VECT_CONVERTER(unt8, 4, NPY_UINT8);
+  REGISTER_VECT_CONVERTER(int8, 4, NPY_INT8);
+  REGISTER_VECT_CONVERTER(unt16, 4, NPY_UINT16);
+  REGISTER_VECT_CONVERTER(int16, 4, NPY_INT16);
+  REGISTER_VECT_CONVERTER(unt32, 4, NPY_UINT32);
+  REGISTER_VECT_CONVERTER(int32, 4, NPY_INT32);
+  REGISTER_VECT_CONVERTER(unt64, 4, NPY_UINT64);
+  REGISTER_VECT_CONVERTER(int64, 4, NPY_INT64);
+  REGISTER_VECT_CONVERTER(float32, 4, NPY_FLOAT32);
+  REGISTER_VECT_CONVERTER(float64, 4, NPY_FLOAT64);
+
 }
