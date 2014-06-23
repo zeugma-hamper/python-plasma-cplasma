@@ -91,6 +91,7 @@
 // Per-numeric-type methods to create new slaw
 #define SLAW_FROM_NUMERIC(T)                                    \
   static Ref make_ ## T (T t) {                                 \
+    fprintf (stderr, "Slaw::" STR(make_ ## T) "\n");            \
     return Ref(new Slaw (slaw_##T (t)));                        \
   }
 
@@ -113,6 +114,13 @@
 // in the D programming language.)
 #define DECLARE_SLAW_FROM(T)                        \
   .def("make", &Slaw::make_ ##T)                    \
+  .def(STR(make_ ## T), &Slaw::make_ ##T)           \
+  .staticmethod(STR(make_ ## T))
+
+// Vector types don't get the raw "make" on account of
+// they take just an object and will stomp all the other
+// signatures.
+#define DECLARE_SLAW_FROMV(T)                       \
   .def(STR(make_ ## T), &Slaw::make_ ##T)           \
   .staticmethod(STR(make_ ## T))
 

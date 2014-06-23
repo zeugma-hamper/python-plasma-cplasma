@@ -6,6 +6,7 @@
 #include <libPlasma/c/pool.h>
 #include <libPlasma/c/protein.h>
 #include <libPlasma/c/slaw.h>
+#include <libPlasma/c/slaw-io.h>
 
 #include <boost/python.hpp>
 #include <boost/shared_ptr.hpp>
@@ -13,6 +14,8 @@
 
 #include <string>
 #include <vector>
+
+#include <fcntl.h>
 
 #include "horrible_macros.hpp"
 
@@ -188,6 +191,8 @@ py::object makeNumpyArray (const T* data, int64 len) {
 
 } // end detail
 
+class Slaw;
+
 class BSlaw {
  private:
   bslaw slaw_;
@@ -196,6 +201,7 @@ class BSlaw {
   BSlaw (bslaw s) : slaw_ { s } {}
 
   slaw dup () { return slaw_dup (slaw_); }
+  bslaw peek () const { return slaw_; }
 
   py::object emit_list () const {
     py::list lst;
@@ -258,38 +264,23 @@ class BSlaw {
     return py::object();
   }
 
-  py::object emit () const {
-    if (slaw_is_list (slaw_)) {
-      return emit_list ();
-    } else if (slaw_is_map (slaw_)) {
-      return emit_map ();
-    } else if (slaw_is_cons (slaw_)) {
-      return emit_cons ();
-    } else if (slaw_is_numeric_vector (slaw_)) {
-      if (slaw_is_numeric_array (slaw_)) {
-        return emit_numeric_vector_array ();
-      } else { 
-          return emit_numeric_vector ();
-      }
-    } else if (slaw_is_numeric_array (slaw_)) {
-      return emit_numeric_array ();
-    } else if (slaw_is_numeric (slaw_)) {
-      return emit_numeric ();
-    } else if (slaw_is_nil (slaw_)) { 
-      return py::object ();
-    } else if (slaw_is_string (slaw_)) {
-      return py::object (slaw_string_emit (slaw_));
-    } else if (slaw_is_boolean (slaw_)) {
-      return py::object (bool(*slaw_boolean_emit (slaw_)));
-    } else {
-      return py::object ();
-    }
-  }
-
+  py::object emit () const; 
   unt64 listCount () const {
     return slaw_list_count (slaw_);
   }
+
+  BSlaw nth(int64 n) const {
+    return BSlaw (slaw_list_emit_nth (slaw_, n));
+  }
+
+  int64 listFind (int64) const;
+  BSlaw mapFind (boost::shared_ptr<Slaw>) const;
+
+  int64 gapsearch (BSlaw search) const {
+    return slaw_list_gapsearch (slaw_, search . peek ());
+  }
 };
+
 
 class BProtein {
  private:
@@ -309,6 +300,37 @@ class BProtein {
     return dct;
   }
 };
+
+
+py::object BSlaw::emit () const {
+  if (slaw_is_protein (slaw_)) {
+    return BProtein(slaw_).emit();
+  } else if (slaw_is_list (slaw_)) {
+    return emit_list ();
+  } else if (slaw_is_map (slaw_)) {
+    return emit_map ();
+  } else if (slaw_is_cons (slaw_)) {
+    return emit_cons ();
+  } else if (slaw_is_numeric_vector (slaw_)) {
+    if (slaw_is_numeric_array (slaw_)) {
+      return emit_numeric_vector_array ();
+    } else { 
+      return emit_numeric_vector ();
+    }
+  } else if (slaw_is_numeric_array (slaw_)) {
+    return emit_numeric_array ();
+  } else if (slaw_is_numeric (slaw_)) {
+    return emit_numeric ();
+  } else if (slaw_is_nil (slaw_)) { 
+    return py::object ();
+  } else if (slaw_is_string (slaw_)) {
+    return py::object (slaw_string_emit (slaw_));
+  } else if (slaw_is_boolean (slaw_)) {
+    return py::object (bool(*slaw_boolean_emit (slaw_)));
+  } else {
+    return py::object ();
+  }
+}
 
 
 class Slaw {
@@ -339,6 +361,50 @@ class Slaw {
     return slaw_;
   }
   
+  static Ref fromFile (std::string filename) {
+    slaw_input input;
+    int fd = open(filename . c_str(), O_RDONLY);
+    if (-1 == fd) {
+      throw PlasmaException (OB_NOT_FOUND);
+    }
+    ob_retort tort = slaw_input_open_text_fdx(fd, &input);
+    if (0 > tort) {
+      slaw_input_close (input);
+      throw PlasmaException (tort);
+    }
+    slaw s;
+    tort = slaw_input_read (input, &s);
+    if (0 > tort) {
+      slaw_input_close (input);
+      throw PlasmaException (tort);
+    }
+
+    slaw_input_close(input);
+    return Ref (new Slaw (s));
+  }
+
+  static Ref fromFileBinary (std::string filename) {
+    slaw_input input;
+    int fd = open(filename . c_str(), O_RDONLY);
+    if (-1 == fd) {
+      throw PlasmaException (OB_NOT_FOUND);
+    }
+    ob_retort tort = slaw_input_open_binary_fdx(fd, &input);
+    if (0 > tort) {
+      slaw_input_close (input);
+      throw PlasmaException (tort);
+    }
+    slaw s;
+    tort = slaw_input_read (input, &s);
+    if (0 > tort) {
+      slaw_input_close (input);
+      throw PlasmaException (tort);
+    }
+
+    slaw_input_close(input);
+    return Ref (new Slaw (s));
+  }
+
   static Ref fromBslaw (BSlaw bs) {
     return Ref(new Slaw (bs.dup()));
   }
@@ -374,18 +440,6 @@ class Slaw {
     if (obj . is_none ()) {
       return nil();
     }
-
-    PyObject* typ_ = PyObject_Type (obj . ptr ());
-    py::handle<> h (py::borrowed (typ_));
-    py::object typ (h);
-    py::extract<std::string> nam (typ);
-    if (nam . check ()) {
-      std::cerr << "having trouble with type "
-                << nam() << "\n";
-    } else {
-      std::cerr << "Could not coerce a type to a string\n";
-    }
-
     throw PlasmaException (SLAW_FABRICATOR_BADNESS);
   }
 
@@ -490,6 +544,16 @@ class Slaw {
                                          ing -> take ())));
   }
 };
+
+int64 BSlaw::listFind (int64 x) const {
+  auto val = Slaw::make_int64 (x);
+  return slaw_list_find (slaw_, val -> peek ());
+}
+
+BSlaw BSlaw::mapFind (boost::shared_ptr<Slaw> val) const {
+  return BSlaw (slaw_map_find (slaw_, val -> peek ()));
+}
+
 
 class SlawBuilder {
  private:
@@ -789,6 +853,10 @@ class Gang {
     return pool_gang_count (gang);
   }
 
+  void wakeup() {
+    THROW_ERROR_TORT (pool_gang_wake_up (gang));
+  }
+
   py::object nthHose (const int64 idx) {
     pool_hose hose = pool_gang_nth (gang, idx);
     if (nullptr != hose) {
@@ -809,10 +877,10 @@ class Gang {
     if (OB_OK == tort) {
       return py::make_tuple(BProtein (pro), idx, ts, pool_name (ph));
     } else {
-      if (0 > tort) {
-        throw PlasmaException (tort);
+      if (POOL_AWAIT_TIMEDOUT == tort) {
+        return py::object ();
       }
-      return py::object ();
+      throw PlasmaException (tort);
     }
   }
 
@@ -844,8 +912,12 @@ BOOST_PYTHON_MODULE(native)
       bslawClass ("BSlaw", py::no_init);
 
   bslawClass
-      .add_property ("listCount", &BSlaw::listCount)
-      .def ("emit", &BSlaw::emit)
+      .def ("listCount", &BSlaw::listCount, "How many items are in this list?")
+      .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
+      .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
+      .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
+      .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
       ;
 
   py::class_<BProtein>
@@ -911,6 +983,7 @@ BOOST_PYTHON_MODULE(native)
       .def ("awaitNext", &Gang::awaitNextForever)
       .def ("next", &Gang::next)
       .def ("nthHose", &Gang::nthHose)
+      .def ("wakeup", &Gang::wakeup)
       ;
 
   py::class_<Slaw, boost::shared_ptr<Slaw> >
@@ -924,21 +997,25 @@ BOOST_PYTHON_MODULE(native)
       .def ("make", &Slaw::fromBprotein)
       DECLARE_INTS(DECLARE_SLAW_FROM,)
       DECLARE_FLOATS(DECLARE_SLAW_FROM,)
-      DECLARE_INTS(DECLARE_SLAW_FROM, v2)
-      DECLARE_FLOATS(DECLARE_SLAW_FROM, v2)
-      DECLARE_INTS(DECLARE_SLAW_FROM, v3)
-      DECLARE_FLOATS(DECLARE_SLAW_FROM, v3)
-      DECLARE_INTS(DECLARE_SLAW_FROM, v4)
-      DECLARE_FLOATS(DECLARE_SLAW_FROM, v4)
+      DECLARE_INTS(DECLARE_SLAW_FROMV, v2)
+      DECLARE_FLOATS(DECLARE_SLAW_FROMV, v2)
+      DECLARE_INTS(DECLARE_SLAW_FROMV, v3)
+      DECLARE_FLOATS(DECLARE_SLAW_FROMV, v3)
+      DECLARE_INTS(DECLARE_SLAW_FROMV, v4)
+      DECLARE_FLOATS(DECLARE_SLAW_FROMV, v4)
       .def ("make", &Slaw::from_numpy)
       .def ("makeArray", &Slaw::from_numpy)
       .def ("nil", &Slaw::nil)
       .def ("makeProtein", &Slaw::makeProtein)
       .def ("makeCons", &Slaw::makeCons)
+      .def ("fromFile", &Slaw::fromFile)
+      .def ("fromFileBinary", &Slaw::fromFileBinary)
       .staticmethod ("make")
       .staticmethod ("makeArray")
       .staticmethod ("nil")
       .staticmethod ("makeProtein")
+      .staticmethod ("fromFile")
+      .staticmethod ("fromFileBinary")
       ;
 
   py::class_<SlawBuilder, SlawBuilder::Ref>

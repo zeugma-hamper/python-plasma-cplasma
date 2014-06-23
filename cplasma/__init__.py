@@ -658,6 +658,15 @@ class HoseGang(object):
         self.__gang.leave(hose._native_hose())
         self.__hoses.remove(hose)
 
+    def cancel_awaiter(self):
+        """
+        A signal-safe and thread-safe function to interrupt any call to
+        pool_await_next_multi() on this gang. For each time that this
+        function is called, one call to await_next_multi() will return with a
+        pool_retort of POOL_AWAIT_WOKEN.
+        """
+        self.__gang.wakeup()
+
     def withdraw(self):
         '''
         Noop. This will happen automagically when the hose is destroyed.
