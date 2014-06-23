@@ -91,7 +91,6 @@
 // Per-numeric-type methods to create new slaw
 #define SLAW_FROM_NUMERIC(T)                                    \
   static Ref make_ ## T (T t) {                                 \
-    fprintf (stderr, "Slaw::" STR(make_ ## T) "\n");            \
     return Ref(new Slaw (slaw_##T (t)));                        \
   }
 
