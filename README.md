@@ -14,4 +14,7 @@ Use `distutils`.
 
 ## Use
 
-*TODO*
+For now there are a couple of small examples:
+
+* `examples/sluice_heart_watcher.py` shows how to listen to a pool
+* `examples/tiled.py` is a small, feature-poor replacemnt for the exiting C++ tiled.
