@@ -44,49 +44,131 @@ namespace detail {
 
 template <typename T> struct numpy_info { };
 
-DEFINE_NUMPY_INFO(unt8, NPY_UINT8, 1);
-DEFINE_NUMPY_INFO(int8, NPY_INT8, 1);
-DEFINE_NUMPY_INFO(unt16, NPY_UINT16, 1);
-DEFINE_NUMPY_INFO(int16, NPY_INT16, 1);
-DEFINE_NUMPY_INFO(unt32, NPY_UINT32, 1);
-DEFINE_NUMPY_INFO(int32, NPY_INT32, 1);
-DEFINE_NUMPY_INFO(unt64, NPY_UINT64, 1);
-DEFINE_NUMPY_INFO(int64, NPY_INT64, 1);
-DEFINE_NUMPY_INFO(float32, NPY_FLOAT32, 1);
-DEFINE_NUMPY_INFO(float64, NPY_FLOAT64, 1);
 
-DEFINE_NUMPY_INFO(v2unt8, NPY_UINT8, 2);
-DEFINE_NUMPY_INFO(v2int8, NPY_INT8, 2);
-DEFINE_NUMPY_INFO(v2unt16, NPY_UINT16, 2);
-DEFINE_NUMPY_INFO(v2int16, NPY_INT16, 2);
-DEFINE_NUMPY_INFO(v2unt32, NPY_UINT32, 2);
-DEFINE_NUMPY_INFO(v2int32, NPY_INT32, 2);
-DEFINE_NUMPY_INFO(v2unt64, NPY_UINT64, 2);
-DEFINE_NUMPY_INFO(v2int64, NPY_INT64, 2);
-DEFINE_NUMPY_INFO(v2float32, NPY_FLOAT32, 2);
-DEFINE_NUMPY_INFO(v2float64, NPY_FLOAT64, 2);
+// Numeric conversion types of vNtypeBits types.
+// Convert to python objects (numpy.ndarray)
+template <typename V, int VSIZE, int NPYTYP>
+struct vtype_to_python_obj {
+  static PyObject* convert (V const& v) {
+    npy_intp dim = VSIZE;
+    // Yes, we're treating the vector type as an array. Intentionally.
+    PyObject* src = PyArray_SimpleNewFromData
+        (1, &dim, NPYTYP, (void*) &v);
+    PyObject* arr = PyArray_EMPTY(1, &dim, NPYTYP, 0);
+    PyArray_CopyInto (reinterpret_cast<PyArrayObject*> (arr),
+                      reinterpret_cast<PyArrayObject*> (src));
+    return py::incref(arr);
+  }
+};
+// Convert from python objects (numpy.ndarray)
+template <typename V, typename T, int VSIZE, int NPYTYP>
+struct python_obj_to_vtype {
+  static void* convertible(PyObject* objptr) {
+    if (NPYTYP == PyArray_TYPE(objptr)) {
+      py::handle<> h (py::borrowed (objptr));
+      py::object arr(h);
+      py::object shape = arr.attr ("shape");
+      if (1 == py::len (shape) && VSIZE == py::extract<int> (shape[0])) {
+        return objptr;
+      }
+    }
+    return nullptr;
+  }
+  
+  // Convert obj_ptr into a QString
+  static void construct(
+      PyObject* obj_ptr,
+      boost::python::converter::rvalue_from_python_stage1_data* data)
+  { void* orig = ((PyArrayObject*) obj_ptr) -> data;
+    // Grab pointer to memory into which to construct the new QString
+    void* storage = (
+        (boost::python::converter::rvalue_from_python_storage<V>*)
+        data)->storage.bytes;
+    // It's all just packed arrays, right? What could possibly go wrong?
+    memcpy(storage, orig, VSIZE * sizeof(T));
+    // Stash the memory chunk pointer for later use by boost.python
+    data->convertible = storage;
+  }
+};
 
-DEFINE_NUMPY_INFO(v3unt8, NPY_UINT8, 3);
-DEFINE_NUMPY_INFO(v3int8, NPY_INT8, 3);
-DEFINE_NUMPY_INFO(v3unt16, NPY_UINT16, 3);
-DEFINE_NUMPY_INFO(v3int16, NPY_INT16, 3);
-DEFINE_NUMPY_INFO(v3unt32, NPY_UINT32, 3);
-DEFINE_NUMPY_INFO(v3int32, NPY_INT32, 3);
-DEFINE_NUMPY_INFO(v3unt64, NPY_UINT64, 3);
-DEFINE_NUMPY_INFO(v3int64, NPY_INT64, 3);
-DEFINE_NUMPY_INFO(v3float32, NPY_FLOAT32, 3);
-DEFINE_NUMPY_INFO(v3float64, NPY_FLOAT64, 3);
+// Template definitions for converting from slaw arrays to numpy arrays
+DECLARE_NUMPY_INFO(unt8, NPY_UINT8, 1);
+DECLARE_NUMPY_INFO(int8, NPY_INT8, 1);
+DECLARE_NUMPY_INFO(unt16, NPY_UINT16, 1);
+DECLARE_NUMPY_INFO(int16, NPY_INT16, 1);
+DECLARE_NUMPY_INFO(unt32, NPY_UINT32, 1);
+DECLARE_NUMPY_INFO(int32, NPY_INT32, 1);
+DECLARE_NUMPY_INFO(unt64, NPY_UINT64, 1);
+DECLARE_NUMPY_INFO(int64, NPY_INT64, 1);
+DECLARE_NUMPY_INFO(float32, NPY_FLOAT32, 1);
+DECLARE_NUMPY_INFO(float64, NPY_FLOAT64, 1);
 
-DEFINE_NUMPY_INFO(v4unt8, NPY_UINT8, 4);
-DEFINE_NUMPY_INFO(v4int8, NPY_INT8, 4);
-DEFINE_NUMPY_INFO(v4unt16, NPY_UINT16, 4);
-DEFINE_NUMPY_INFO(v4int16, NPY_INT16, 4);
-DEFINE_NUMPY_INFO(v4unt32, NPY_UINT32, 4);
-DEFINE_NUMPY_INFO(v4int32, NPY_INT32, 4);
-DEFINE_NUMPY_INFO(v4unt64, NPY_UINT64, 4);
-DEFINE_NUMPY_INFO(v4int64, NPY_INT64, 4);
-DEFINE_NUMPY_INFO(v4float32, NPY_FLOAT32, 4);
-DEFINE_NUMPY_INFO(v4float64, NPY_FLOAT64, 4);
+DECLARE_NUMPY_INFO(v2unt8, NPY_UINT8, 2);
+DECLARE_NUMPY_INFO(v2int8, NPY_INT8, 2);
+DECLARE_NUMPY_INFO(v2unt16, NPY_UINT16, 2);
+DECLARE_NUMPY_INFO(v2int16, NPY_INT16, 2);
+DECLARE_NUMPY_INFO(v2unt32, NPY_UINT32, 2);
+DECLARE_NUMPY_INFO(v2int32, NPY_INT32, 2);
+DECLARE_NUMPY_INFO(v2unt64, NPY_UINT64, 2);
+DECLARE_NUMPY_INFO(v2int64, NPY_INT64, 2);
+DECLARE_NUMPY_INFO(v2float32, NPY_FLOAT32, 2);
+DECLARE_NUMPY_INFO(v2float64, NPY_FLOAT64, 2);
+
+DECLARE_NUMPY_INFO(v3unt8, NPY_UINT8, 3);
+DECLARE_NUMPY_INFO(v3int8, NPY_INT8, 3);
+DECLARE_NUMPY_INFO(v3unt16, NPY_UINT16, 3);
+DECLARE_NUMPY_INFO(v3int16, NPY_INT16, 3);
+DECLARE_NUMPY_INFO(v3unt32, NPY_UINT32, 3);
+DECLARE_NUMPY_INFO(v3int32, NPY_INT32, 3);
+DECLARE_NUMPY_INFO(v3unt64, NPY_UINT64, 3);
+DECLARE_NUMPY_INFO(v3int64, NPY_INT64, 3);
+DECLARE_NUMPY_INFO(v3float32, NPY_FLOAT32, 3);
+DECLARE_NUMPY_INFO(v3float64, NPY_FLOAT64, 3);
+
+DECLARE_NUMPY_INFO(v4unt8, NPY_UINT8, 4);
+DECLARE_NUMPY_INFO(v4int8, NPY_INT8, 4);
+DECLARE_NUMPY_INFO(v4unt16, NPY_UINT16, 4);
+DECLARE_NUMPY_INFO(v4int16, NPY_INT16, 4);
+DECLARE_NUMPY_INFO(v4unt32, NPY_UINT32, 4);
+DECLARE_NUMPY_INFO(v4int32, NPY_INT32, 4);
+DECLARE_NUMPY_INFO(v4unt64, NPY_UINT64, 4);
+DECLARE_NUMPY_INFO(v4int64, NPY_INT64, 4);
+DECLARE_NUMPY_INFO(v4float32, NPY_FLOAT32, 4);
+DECLARE_NUMPY_INFO(v4float64, NPY_FLOAT64, 4);
+
+// Template definitions for convertion from vNtypeBITs to numpy arrays
+DECLARE_VECT_CONVERTER(unt8, 2, NPY_UINT8);
+DECLARE_VECT_CONVERTER(int8, 2, NPY_INT8);
+DECLARE_VECT_CONVERTER(unt16, 2, NPY_UINT16);
+DECLARE_VECT_CONVERTER(int16, 2, NPY_INT16);
+DECLARE_VECT_CONVERTER(unt32, 2, NPY_UINT32);
+DECLARE_VECT_CONVERTER(int32, 2, NPY_INT32);
+DECLARE_VECT_CONVERTER(unt64, 2, NPY_UINT64);
+DECLARE_VECT_CONVERTER(int64, 2, NPY_INT64);
+DECLARE_VECT_CONVERTER(float32, 2, NPY_FLOAT32);
+DECLARE_VECT_CONVERTER(float64, 2, NPY_FLOAT64);
+
+DECLARE_VECT_CONVERTER(unt8, 3, NPY_UINT8);
+DECLARE_VECT_CONVERTER(int8, 3, NPY_INT8);
+DECLARE_VECT_CONVERTER(unt16, 3, NPY_UINT16);
+DECLARE_VECT_CONVERTER(int16, 3, NPY_INT16);
+DECLARE_VECT_CONVERTER(unt32, 3, NPY_UINT32);
+DECLARE_VECT_CONVERTER(int32, 3, NPY_INT32);
+DECLARE_VECT_CONVERTER(unt64, 3, NPY_UINT64);
+DECLARE_VECT_CONVERTER(int64, 3, NPY_INT64);
+DECLARE_VECT_CONVERTER(float32, 3, NPY_FLOAT32);
+DECLARE_VECT_CONVERTER(float64, 3, NPY_FLOAT64);
+
+DECLARE_VECT_CONVERTER(unt8, 4, NPY_UINT8);
+DECLARE_VECT_CONVERTER(int8, 4, NPY_INT8);
+DECLARE_VECT_CONVERTER(unt16, 4, NPY_UINT16);
+DECLARE_VECT_CONVERTER(int16, 4, NPY_INT16);
+DECLARE_VECT_CONVERTER(unt32, 4, NPY_UINT32);
+DECLARE_VECT_CONVERTER(int32, 4, NPY_INT32);
+DECLARE_VECT_CONVERTER(unt64, 4, NPY_UINT64);
+DECLARE_VECT_CONVERTER(int64, 4, NPY_INT64);
+DECLARE_VECT_CONVERTER(float32, 4, NPY_FLOAT32);
+DECLARE_VECT_CONVERTER(float64, 4, NPY_FLOAT64);
 
 template <typename T>
 py::object makeNumpyArray (const T* data, int64 len) {
@@ -104,7 +186,7 @@ py::object makeNumpyArray (const T* data, int64 len) {
   return arr;
 }
 
-}
+} // end detail
 
 class BSlaw {
  private:
@@ -277,14 +359,14 @@ class Slaw {
   DECLARE_INTS (SLAW_FROM_NUMERIC,);
   DECLARE_FLOATS (SLAW_FROM_NUMERIC,);
 
-  DECLARE_INTS (SLAW_FROM_NUMERIC, v2);
-  DECLARE_FLOATS (SLAW_FROM_NUMERIC, v2);
+  DECLARE_INTS (SLAW_FROM_NUMERICV, v2);
+  DECLARE_FLOATS (SLAW_FROM_NUMERICV, v2);
 
-  DECLARE_INTS (SLAW_FROM_NUMERIC, v3);
-  DECLARE_FLOATS (SLAW_FROM_NUMERIC, v3);
+  DECLARE_INTS (SLAW_FROM_NUMERICV, v3);
+  DECLARE_FLOATS (SLAW_FROM_NUMERICV, v3);
 
-  DECLARE_INTS (SLAW_FROM_NUMERIC, v4);
-  DECLARE_FLOATS (SLAW_FROM_NUMERIC, v4);
+  DECLARE_INTS (SLAW_FROM_NUMERICV, v4);
+  DECLARE_FLOATS (SLAW_FROM_NUMERICV, v4);
 
   static Ref nil() { return Ref (new Slaw (slaw_nil())); }
   
@@ -746,54 +828,6 @@ void translatePlasmaException (PlasmaException const& e)
 }
 
 
-// Numeric conversion types of vNtypeBits types.
-template <typename V, int VSIZE, int NPYTYP>
-struct vtype_to_python_obj {
-  static PyObject* convert (V const& v) {
-    npy_intp dim = VSIZE;
-    // Yes, we're treating the vector type as an array. Intentionally.
-    PyObject* src = PyArray_SimpleNewFromData
-        (1, &dim, NPYTYP, (void*) &v);
-    PyObject* arr = PyArray_EMPTY(1, &dim, NPYTYP, 0);
-    PyArray_CopyInto (reinterpret_cast<PyArrayObject*> (arr),
-                      reinterpret_cast<PyArrayObject*> (src));
-    return py::incref(arr);
-  }
-};
-
-DECLARE_VECT_CONVERTER(unt8, 2, NPY_UINT8);
-DECLARE_VECT_CONVERTER(int8, 2, NPY_INT8);
-DECLARE_VECT_CONVERTER(unt16, 2, NPY_UINT16);
-DECLARE_VECT_CONVERTER(int16, 2, NPY_INT16);
-DECLARE_VECT_CONVERTER(unt32, 2, NPY_UINT32);
-DECLARE_VECT_CONVERTER(int32, 2, NPY_INT32);
-DECLARE_VECT_CONVERTER(unt64, 2, NPY_UINT64);
-DECLARE_VECT_CONVERTER(int64, 2, NPY_INT64);
-DECLARE_VECT_CONVERTER(float32, 2, NPY_FLOAT32);
-DECLARE_VECT_CONVERTER(float64, 2, NPY_FLOAT64);
-
-DECLARE_VECT_CONVERTER(unt8, 3, NPY_UINT8);
-DECLARE_VECT_CONVERTER(int8, 3, NPY_INT8);
-DECLARE_VECT_CONVERTER(unt16, 3, NPY_UINT16);
-DECLARE_VECT_CONVERTER(int16, 3, NPY_INT16);
-DECLARE_VECT_CONVERTER(unt32, 3, NPY_UINT32);
-DECLARE_VECT_CONVERTER(int32, 3, NPY_INT32);
-DECLARE_VECT_CONVERTER(unt64, 3, NPY_UINT64);
-DECLARE_VECT_CONVERTER(int64, 3, NPY_INT64);
-DECLARE_VECT_CONVERTER(float32, 3, NPY_FLOAT32);
-DECLARE_VECT_CONVERTER(float64, 3, NPY_FLOAT64);
-
-DECLARE_VECT_CONVERTER(unt8, 4, NPY_UINT8);
-DECLARE_VECT_CONVERTER(int8, 4, NPY_INT8);
-DECLARE_VECT_CONVERTER(unt16, 4, NPY_UINT16);
-DECLARE_VECT_CONVERTER(int16, 4, NPY_INT16);
-DECLARE_VECT_CONVERTER(unt32, 4, NPY_UINT32);
-DECLARE_VECT_CONVERTER(int32, 4, NPY_INT32);
-DECLARE_VECT_CONVERTER(unt64, 4, NPY_UINT64);
-DECLARE_VECT_CONVERTER(int64, 4, NPY_INT64);
-DECLARE_VECT_CONVERTER(float32, 4, NPY_FLOAT32);
-DECLARE_VECT_CONVERTER(float64, 4, NPY_FLOAT64);
-
 
 BOOST_PYTHON_MODULE(native)
 { py::class_<PlasmaException>
@@ -952,5 +986,4 @@ BOOST_PYTHON_MODULE(native)
   REGISTER_VECT_CONVERTER(int64, 4, NPY_INT64);
   REGISTER_VECT_CONVERTER(float32, 4, NPY_FLOAT32);
   REGISTER_VECT_CONVERTER(float64, 4, NPY_FLOAT64);
-
 }

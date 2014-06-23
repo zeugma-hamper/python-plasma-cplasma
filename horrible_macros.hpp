@@ -75,7 +75,7 @@
 
 // Create a struct specialization to tell us everything we need
 // to know about marshaling from slaw arrays to numpy arrays
-#define DEFINE_NUMPY_INFO(T, NT, DIMS)                          \
+#define DECLARE_NUMPY_INFO(T, NT, DIMS)                         \
   template <> struct numpy_info<T> {                            \
     static const int typenum() { return NT; }                   \
     static const int ND() { return  DIMS > 1 ? 2 : 1; }         \
@@ -90,8 +90,18 @@
 
 // Per-numeric-type methods to create new slaw
 #define SLAW_FROM_NUMERIC(T)                                    \
-  static Ref make_ ## T (T t) {                                   \
+  static Ref make_ ## T (T t) {                                 \
     return Ref(new Slaw (slaw_##T (t)));                        \
+  }
+
+// Per-numeric-type methods to create new slaw
+#define SLAW_FROM_NUMERICV(T)                                   \
+  static Ref make_ ## T (py::object obj) {                      \
+    py::extract<T> vec (obj);                                   \
+    if (! vec . check ()) {                                     \
+      throw PlasmaException (SLAW_NOT_NUMERIC);                 \
+    }                                                           \
+    return Ref (new Slaw (slaw_##T (vec ())));                  \
   }
 
 // Define endpoints in the Slaw python class.
@@ -141,11 +151,19 @@
         return Ref(new Slaw (slaw_v4##OBTYP##_array(data, len)));       \
   }
 
+// Declare types to take ob-vectors to/from numpy.ndarrays
+#define DECLARE_VECT_CONVERTER(TYP, VSIZE, NPYTYP)                      \
+    typedef vtype_to_python_obj<v##VSIZE##TYP, VSIZE, NPYTYP>           \
+    v##VSIZE##TYP##_converter;                                          \
+    typedef python_obj_to_vtype<v##VSIZE##TYP, TYP, VSIZE, NPYTYP>      \
+    v##VSIZE##TYP##_extractor;
 
-#define DECLARE_VECT_CONVERTER(TYP, VSIZE, NPYTYP)          \
-  typedef vtype_to_python_obj<v##VSIZE##TYP, VSIZE, NPYTYP> \
-  v##VSIZE##TYP##_converter
+// Register types to take ob-vectors to/from numpy.ndarrays
+#define REGISTER_VECT_CONVERTER(TYP, VSIZE, NPYTYP)              \
+    py::to_python_converter                                      \
+    <v##VSIZE##TYP, detail::v##VSIZE##TYP##_converter> ();       \
+    py::converter::registry::push_back(                          \
+        &detail::v##VSIZE##TYP##_extractor::convertible,         \
+        &detail::v##VSIZE##TYP##_extractor::construct,           \
+      py::type_id<v##VSIZE##TYP>())
 
-#define REGISTER_VECT_CONVERTER(TYP, VSIZE, NPYTYP)     \
-  py::to_python_converter                               \
-  <v##VSIZE##TYP, v##VSIZE##TYP##_converter> ()

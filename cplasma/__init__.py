@@ -2,9 +2,10 @@
 C Plasma
 '''
 
+# (c) 2014 MCT
+
 import native
 import numpy
-# import compat
 
 POOL_WAIT_FOREVER = -1.0
 
