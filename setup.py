@@ -34,7 +34,7 @@ def cplasma_extension():
                      sources = ['cplasma_ext.cpp'],
                      libraries = ['boost_python'],
                      include_dirs = [numpy.get_include()],
-                     extra_compile_args = ['-std=c++11'] + compiler_args.split(),
+                     extra_compile_args = ['-std=c++0x'] + compiler_args.split(),
                      extra_link_args = linker_args.split())
 
 
