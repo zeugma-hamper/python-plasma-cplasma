@@ -12,7 +12,10 @@ POOL_WAIT_FOREVER = -1.0
 def Slaw(x):
     'Turn an object in to a Slaw that you can send over a hose'
     # x = compat.loam_conv(x)
-    if isinstance(x, native.Slaw):
+
+    if x is None:
+        return native.Slaw.nil()
+    elif isinstance(x, native.Slaw):
         return x
     elif hasattr(x, 'toSlaw'):
         # Here's our recipe for dealing with user-defined classes.
@@ -31,7 +34,8 @@ def Slaw(x):
         it = iter(x)
         bu = native.SlawBuilder()
         for y in it:
-            bu.listAppend(Slaw(y))
+            sy = Slaw(y)
+            bu.listAppend(sy)
         return bu.takeList()
     elif isinstance(x, numpy.uint8):
         return native.Slaw.make_unt8(int(x))
@@ -70,7 +74,7 @@ def Protein(des, ing):
 
 def QID(qid):
     'Create the magic, mythical SlawQID.  Bizarrely a cons.'
-    bytez = numpy.array([qid[i] for i in range(8)], numpy.unt8)
+    bytez = numpy.array([qid[i] for i in xrange(16)], numpy.uint8)
     return native.Slaw.makeCons(native.Slaw.make('SlawQID'),
                                 native.Slaw.makeArray(bytez))
     
