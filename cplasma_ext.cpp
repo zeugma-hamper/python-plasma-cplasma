@@ -229,7 +229,7 @@ class BSlaw {
   py::object emit_cons () const {
     BSlaw car { slaw_cons_emit_car (slaw_) };
     BSlaw cdr { slaw_cons_emit_cdr (slaw_) };
-    return py::make_tuple (car, cdr);
+    return py::make_tuple (car . emit (), cdr . emit ());
   }
 
   py::object emit_numeric_vector_array () const {
@@ -990,7 +990,6 @@ BOOST_PYTHON_MODULE(native)
       slawClass ("Slaw");
 
   slawClass
-      .def ("make", &Slaw::from_obj)
       .def ("read", &Slaw::read)
       .def ("make", &Slaw::from_string)
       .def ("make", &Slaw::fromBslaw)
@@ -1010,6 +1009,7 @@ BOOST_PYTHON_MODULE(native)
       .def ("makeCons", &Slaw::makeCons)
       .def ("fromFile", &Slaw::fromFile)
       .def ("fromFileBinary", &Slaw::fromFileBinary)
+      // .def ("make", &Slaw::from_obj)
       .staticmethod ("make")
       .staticmethod ("makeArray")
       .staticmethod ("nil")
