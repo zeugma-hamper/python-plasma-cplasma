@@ -2,6 +2,7 @@
 // (c) 2014 MCT
 
 #include <iostream>
+#include <stdlib.h>
 
 #include <libPlasma/c/pool.h>
 #include <libPlasma/c/protein.h>
@@ -22,7 +23,7 @@
 
 namespace py = boost::python;
 
-class PlasmaException : public std::exception {
+class PlasmaException : virtual boost::exception, virtual std::exception {
  private:
   ob_retort tort;
 
@@ -888,23 +889,30 @@ class Gang {
   py::object next() { return awaitNext (0.0); }
 };
 
+
+
 static PyObject *plasmaExceptionType = nullptr;
+PyObject* plasmaExceptionClass = 0;
 void translatePlasmaException (PlasmaException const& e)
-{ assert (nullptr != plasmaExceptionType);
-  py::object pythonExceptionInstance (e);
-  PyErr_SetObject(plasmaExceptionType, pythonExceptionInstance.ptr());
+{ char * retort;
+  sprintf(retort, "%lld", e.retort());
+  PyErr_SetString(plasmaExceptionClass, retort);
+}
+
+PyObject* createExceptionClass(const char* name)
+{ std::string scopeName = py::extract<std::string>(py::scope().attr("__name__"));
+    std::string qualifiedName0 = scopeName + "." + name;
+    char* qualifiedName1 = const_cast<char*>(qualifiedName0.c_str());
+
+    PyObject* typeObj = PyErr_NewException(qualifiedName1, PyExc_Exception, 0);
+    if(!typeObj) py::throw_error_already_set();
+    py::scope().attr(name) = py::handle<>(py::borrowed(typeObj));
+    return typeObj;
 }
 
 
-
 BOOST_PYTHON_MODULE(native)
-{ py::class_<PlasmaException>
-      plasmaExceptionClass ("PlasmaException",
-                            py::init<ob_retort> ());
-  plasmaExceptionClass
-      .add_property("description", &PlasmaException::description)
-      .add_property("retort", &PlasmaException::retort);
-  plasmaExceptionType = plasmaExceptionClass . ptr ();
+{ plasmaExceptionClass = createExceptionClass("PlasmaException");
   py::register_exception_translator<PlasmaException>
       (&translatePlasmaException);
 
