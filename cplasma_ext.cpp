@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <libPlasma/c/pool.h>
 #include <libPlasma/c/protein.h>
@@ -891,14 +892,6 @@ class Gang {
 
 
 
-static PyObject *plasmaExceptionType = nullptr;
-PyObject* plasmaExceptionClass = 0;
-void translatePlasmaException (PlasmaException const& e)
-{ char * retort;
-  sprintf(retort, "%lld", e.retort());
-  PyErr_SetString(plasmaExceptionClass, retort);
-}
-
 PyObject* createExceptionClass(const char* name)
 { std::string scopeName = py::extract<std::string>(py::scope().attr("__name__"));
     std::string qualifiedName0 = scopeName + "." + name;
@@ -910,9 +903,30 @@ PyObject* createExceptionClass(const char* name)
     return typeObj;
 }
 
+//static PyObject *plasmaExceptionType = nullptr;
+PyObject* plasmaExceptionClass = 0;
+PyObject* plasmaExceptionClass2 = 0;
+PyObject* plasmaExceptionClass9 = 0;
+void translatePlasmaException (PlasmaException const& e)
+{ 
+  int64 retort = e.retort();
+  char * msg;
+  sprintf(msg, "%lld", retort);
+  if (retort == -210002) {
+      PyErr_SetString(plasmaExceptionClass9, msg);
+  } else if (retort < 210002) {
+      PyErr_SetString(plasmaExceptionClass2, msg);
+  } else {
+      PyErr_SetString(plasmaExceptionClass, msg);
+  }
+}
+
 
 BOOST_PYTHON_MODULE(native)
-{ plasmaExceptionClass = createExceptionClass("PlasmaException");
+{
+  plasmaExceptionClass = createExceptionClass("PlasmaException");
+  plasmaExceptionClass2 = createExceptionClass("PlasmaException3");
+  plasmaExceptionClass9 = createExceptionClass("PlasmaException9");
   py::register_exception_translator<PlasmaException>
       (&translatePlasmaException);
 
