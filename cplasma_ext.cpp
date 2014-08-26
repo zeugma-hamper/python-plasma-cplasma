@@ -203,6 +203,17 @@ class BSlaw {
   slaw dup () { return slaw_dup (slaw_); }
   bslaw peek () const { return slaw_; }
 
+  std::string toYaml() {
+    slaw s;
+    ob_retort tort = slaw_to_string (slaw_, &s);
+    if (0 > tort) {
+      throw PlasmaException (tort);
+    }
+    std::string output(slaw_string_emit(s));
+    slaw_free(s);
+    return output;
+  }
+
   py::object emit_list () const {
     py::list lst;
     bslaw s = slaw_list_emit_first (slaw_);
@@ -299,6 +310,17 @@ class BProtein {
     dct.setdefault("ingests", ingests () . emit ());
     return dct;
   }
+
+  std::string toYaml() {
+    slaw s;
+    ob_retort tort = slaw_to_string (pro, &s);
+    if (0 > tort) {
+      throw PlasmaException (tort);
+    }
+    std::string output(slaw_string_emit(s));
+    slaw_free(s);
+    return output;
+  }
 };
 
 
@@ -359,6 +381,26 @@ class Slaw {
 
   bslaw peek () const {
     return slaw_;
+  }
+
+  std::string toYaml() {
+    slaw s;
+    ob_retort tort = slaw_to_string (slaw_, &s);
+    if (0 > tort) {
+      throw PlasmaException (tort);
+    }
+    std::string output(slaw_string_emit(s));
+    slaw_free(s);
+    return output;
+  }
+
+  static Ref fromYaml (std::string yaml) {
+    slaw s;
+    ob_retort tort = slaw_from_string (yaml.c_str(), &s);
+    if (tort < 0) {
+      throw PlasmaException (tort);
+    }
+    return Ref(new Slaw (s));
   }
   
   static Ref fromFile (std::string filename) {
@@ -918,6 +960,7 @@ BOOST_PYTHON_MODULE(native)
       .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
       .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
       .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("toYaml", &BSlaw::toYaml, "Dump this slaw to a yaml string")
       ;
 
   py::class_<BProtein>
@@ -927,6 +970,7 @@ BOOST_PYTHON_MODULE(native)
       .add_property("ingests", &BProtein::ingests)
       .add_property("descrips", &BProtein::descrips)
       .def("emit", &BProtein::emit)
+      .def ("toYaml", &BProtein::toYaml, "Dump this protein to a yaml string")
       ;
 
   py::class_<Hose>
@@ -1009,13 +1053,15 @@ BOOST_PYTHON_MODULE(native)
       .def ("makeCons", &Slaw::makeCons)
       .def ("fromFile", &Slaw::fromFile)
       .def ("fromFileBinary", &Slaw::fromFileBinary)
-      // .def ("make", &Slaw::from_obj)
+      .def ("toYaml", &Slaw::toYaml, "Dump this slaw to a yaml string")
+      .def ("fromYaml", &Slaw::fromYaml, "Create a new slaw from a yaml string")
       .staticmethod ("make")
       .staticmethod ("makeArray")
       .staticmethod ("nil")
       .staticmethod ("makeProtein")
       .staticmethod ("fromFile")
       .staticmethod ("fromFileBinary")
+      .staticmethod ("fromYaml")
       ;
 
   py::class_<SlawBuilder, SlawBuilder::Ref>
