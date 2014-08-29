@@ -2,8 +2,6 @@
 // (c) 2014 MCT
 
 #include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
 
 #include <libPlasma/c/pool.h>
 #include <libPlasma/c/protein.h>
@@ -24,7 +22,7 @@
 
 namespace py = boost::python;
 
-class PlasmaException : virtual boost::exception, virtual std::exception {
+class PlasmaException : public std::exception {
  private:
   ob_retort tort;
 
@@ -891,42 +889,29 @@ class Gang {
 };
 
 
-
-PyObject* createExceptionClass(const char* name)
-{ std::string scopeName = py::extract<std::string>(py::scope().attr("__name__"));
-    std::string qualifiedName0 = scopeName + "." + name;
-    char* qualifiedName1 = const_cast<char*>(qualifiedName0.c_str());
-
-    PyObject* typeObj = PyErr_NewException(qualifiedName1, PyExc_Exception, 0);
-    if(!typeObj) py::throw_error_already_set();
-    py::scope().attr(name) = py::handle<>(py::borrowed(typeObj));
-    return typeObj;
-}
-
-//static PyObject *plasmaExceptionType = nullptr;
-PyObject* plasmaExceptionClass = 0;
-PyObject* plasmaExceptionClass2 = 0;
-PyObject* plasmaExceptionClass9 = 0;
+//TODO: Should probably consider raising a plasma exception if there is an issue with
+// the import here make PlasmaException a child of Exception using:
+// class PlasmaException : virtual boost::exception, virtual std::exception
+boost::python::object exceptions = boost::python::import("cplasma.exceptions");
+py::dict exception_dict = py::extract<py::dict>(exceptions.attr("PLASMA_RETORT_EXCEPTIONS"));
 void translatePlasmaException (PlasmaException const& e)
 { 
-  int64 retort = e.retort();
-  char * msg;
-  sprintf(msg, "%lld", retort);
-  if (retort == -210002) {
-      PyErr_SetString(plasmaExceptionClass9, msg);
-  } else if (retort < 210002) {
-      PyErr_SetString(plasmaExceptionClass2, msg);
+  const int64 retort = e.retort();
+  py::object my_exception_boost;
+  if (exception_dict.has_key(retort)){
+      my_exception_boost = (py::object) exception_dict.get(retort);
   } else {
-      PyErr_SetString(plasmaExceptionClass, msg);
+      my_exception_boost = py::extract<py::object>(exceptions.attr("PlasmaException"));
   }
+  //Set a generic error message, this can change in the future though
+  PyObject *myexc = (PyObject*) my_exception_boost.ptr();
+  PyObject *myexc_inst = PyObject_CallFunction(myexc, (char *)"s", "Error");
+  PyErr_SetObject(myexc, myexc_inst);
 }
 
 
 BOOST_PYTHON_MODULE(native)
 {
-  plasmaExceptionClass = createExceptionClass("PlasmaException");
-  plasmaExceptionClass2 = createExceptionClass("PlasmaException3");
-  plasmaExceptionClass9 = createExceptionClass("PlasmaException9");
   py::register_exception_translator<PlasmaException>
       (&translatePlasmaException);
 
