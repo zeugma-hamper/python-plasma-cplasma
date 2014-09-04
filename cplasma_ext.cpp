@@ -373,7 +373,7 @@ py::object BSlaw::emit () const {
 
 class Slaw {
  private:
-  slaw slaw_ = nullptr;
+  slaw slaw_;
 
  public:
   typedef boost::shared_ptr<Slaw> Ref;
