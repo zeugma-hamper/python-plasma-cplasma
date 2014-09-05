@@ -960,23 +960,30 @@ class Gang {
   py::object next() { return awaitNext (0.0); }
 };
 
-static PyObject *plasmaExceptionType = nullptr;
+
+//TODO: Should probably consider raising a plasma exception if there is an issue with
+// the import here make PlasmaException a child of Exception using:
+// class PlasmaException : virtual boost::exception, virtual std::exception
+boost::python::object exceptions = boost::python::import("cplasma.exceptions");
+py::dict exception_dict = py::extract<py::dict>(exceptions.attr("PLASMA_RETORT_EXCEPTIONS"));
 void translatePlasmaException (PlasmaException const& e)
-{ assert (nullptr != plasmaExceptionType);
-  py::object pythonExceptionInstance (e);
-  PyErr_SetObject(plasmaExceptionType, pythonExceptionInstance.ptr());
+{ 
+  const int64 retort = e.retort();
+  py::object my_exception_boost;
+  if (exception_dict.has_key(retort)){
+      my_exception_boost = (py::object) exception_dict.get(retort);
+  } else {
+      my_exception_boost = py::extract<py::object>(exceptions.attr("PlasmaException"));
+  }
+  //Set a generic error message, this can change in the future though
+  PyObject *myexc = (PyObject*) my_exception_boost.ptr();
+  PyObject *myexc_inst = PyObject_CallFunction(myexc, (char *)"s", "Error");
+  PyErr_SetObject(myexc, myexc_inst);
 }
 
 
-
 BOOST_PYTHON_MODULE(native)
-{ py::class_<PlasmaException>
-      plasmaExceptionClass ("PlasmaException",
-                            py::init<ob_retort> ());
-  plasmaExceptionClass
-      .add_property("description", &PlasmaException::description)
-      .add_property("retort", &PlasmaException::retort);
-  plasmaExceptionType = plasmaExceptionClass . ptr ();
+{
   py::register_exception_translator<PlasmaException>
       (&translatePlasmaException);
 

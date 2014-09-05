@@ -2,18 +2,21 @@ from distutils.core import setup
 from distutils.extension import Extension
 import subprocess, os, os.path, re, numpy
 
+OBLONG_DIR = '/opt/oblong'
+
 def find_gspeak():
     if 'G_SPEAK_HOME' in os.environ:
         return os.environ['G_SPEAK_HOME']
     g_speak = re.compile('g-speak(\d+\.\d+).*')
     options = []
-    for path in os.listdir('/opt/oblong'):
+    for dirname in os.listdir(OBLONG_DIR):
+        path = os.path.join(OBLONG_DIR, dirname)
         if os.path.isdir(path):
-            m = g_speak.match(path)
+            m = g_speak.match(dirname)
             if m:
                 options.append((- float(m.group(1)),
-                                os.path.join('/opt/oblong', path)))
-    if 0 < len(options):
+                                path))
+    if 0 == len(options):
         raise Exception("Could not find a g-speak installation")
 
     return sorted(options)[0][1]
@@ -26,7 +29,7 @@ def cplasma_extension():
                                                  extra_pkg)
     else:
         os.environ['PKG_CONFIG_PATH'] = extra_pkg
-        
+
     compiler_args = subprocess.check_output(['pkg-config', '--cflags', 'libPlasma'])
     linker_args = subprocess.check_output(['pkg-config', '--libs', 'libPlasma'])
 

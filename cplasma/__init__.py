@@ -20,7 +20,7 @@ def Slaw(x):
     elif hasattr(x, 'toSlaw'):
         # Here's our recipe for dealing with user-defined classes.
         # It's expected that their `toSlaw` will use this Slaw
-        # function under the hood to produce results of type 
+        # function under the hood to produce results of type
         # `native.Slaw`.
         return x.toSlaw()
     elif isinstance(x, numpy.ndarray):
@@ -77,7 +77,7 @@ def QID(qid):
     bytez = numpy.array([qid[i] for i in xrange(16)], numpy.uint8)
     return native.Slaw.makeCons(native.Slaw.make('SlawQID'),
                                 native.Slaw.makeArray(bytez))
-    
+
 class Hose(object):
     def __init__(self, pool, options = None):
         self.__hose = native.Hose(pool)
@@ -85,7 +85,7 @@ class Hose(object):
     def _native_hose(self):
         "You probably don't want to."
         return self.__hose
-        
+
     ## --------------------- ##
     ## Creation and Disposal ##
     ## --------------------- ##
@@ -167,7 +167,7 @@ class Hose(object):
         * POOL_NO_SUCH_POOL
           (a pool by that name pool doesn't exist)
         * POOL_IN_USE
-          (there is still a hose open to this pool)        
+          (there is still a hose open to this pool)
         """
         native.Hose.dispose(name)
 
@@ -302,7 +302,7 @@ class Hose(object):
           (connectivity problems)
         * POOL_PROTOCOL_ERROR
           (unexpected responses from the pool server)
-        """        
+        """
         return Hose(name)
 
     @staticmethod
@@ -324,7 +324,7 @@ class Hose(object):
 
     ## ------------------------- ##
     ## Pool and Hose Information ##
-    ## ------------------------- ##        
+    ## ------------------------- ##
 
     @staticmethod
     def list_pools():
@@ -448,7 +448,7 @@ class Hose(object):
         """
         For compatibility purposes this exists, yet it is simply deposit().
         """
-        return self.deposit(protein)    
+        return self.deposit(protein)
 
     ## ------------------ ##
     ## Reading from Pools ##
@@ -508,7 +508,7 @@ class Hose(object):
         I've never once used this facility.  I'm sure it's good fun.
         """
         raise RuntimeError('Unimplemented method: Hose.fetch')
-    
+
     def nth_protein(self, idx):
         """
         Retrieve the protein with the given index.
@@ -541,7 +541,7 @@ class Hose(object):
         """
         raise RuntimeError('Unimplemented method: Hose.index_lookup')
 
-    
+
     def probe_back(self, search):
         """
         Search backward in the pool for a protein with a descrip matching
@@ -594,7 +594,7 @@ class Hose(object):
             protein is found.
         """
         return self.__hose.probeForwardAwait(search, timeout)
-        
+
     def enable_wakeup(self):
         """
         Enable wake_up() for this hose.
@@ -620,13 +620,13 @@ class Hose(object):
         called enable_wakeup() on this hose: in that case, this function
         will raise a PoolWakeupNotEnabledException.
         """
-        self.__hose.wakeup()        
+        self.__hose.wakeup()
 
     def join_gang(self, gang):
         """
         Convenience method for HoseGang.add_hose
         """
-        gang.add_hose(self)        
+        gang.add_hose(self)
 
     def leave_gang(self, gang):
         """
@@ -652,7 +652,7 @@ class HoseGang(object):
             hose = Hose.participate(hose)
             self.__hoses.append(hose)
         self.__gang.join(hose._native_hose())
-    
+
     def remote_hose(self, hose):
         """
         Remove a hose from the gang.  If the argument is a string, remove
@@ -710,5 +710,5 @@ class HoseGang(object):
         it came from.  Or `None` if we time out.
         '''
         return self.__gang.awaitNext(timeout)
-        
-    
+
+
