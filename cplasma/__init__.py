@@ -82,7 +82,7 @@ def QID(qid):
 
 class Hose(object):
     def __init__(self, pool, options = None):
-        self.__hose = native.Hose(pool)
+        self.__hose = native.Hose(str(pool))
 
     def _native_hose(self):
         "You probably don't want to."
@@ -171,7 +171,7 @@ class Hose(object):
         * POOL_IN_USE
           (there is still a hose open to this pool)
         """
-        native.Hose.dispose(name)
+        native.Hose.dispose(str(name))
 
     @staticmethod
     def rename(old_name, new_name):
@@ -181,7 +181,7 @@ class Hose(object):
         Like dispose(), raises PlasmaException if you call it while there
         are any open hoses to old_name.
         """
-        native.Hose.rename(old_name, new_name)
+        native.Hose.rename(str(old_name), str(new_name))
 
     @staticmethod
     def exists(name):
@@ -194,7 +194,7 @@ class Hose(object):
         it. With exists(), it might go away between now and when you
         participate in it.
         """
-        return native.Hose.exists(name)
+        return native.Hose.exists(str(name))
 
     @staticmethod
     def validate_name(name):
@@ -222,7 +222,7 @@ class Hose(object):
           COM3, COM4, COM5, COM6, COM7, COM8, COM9, LPT1, LPT2, LPT3,
           LPT4, LPT5, LPT6, LPT7, LPT8, and LPT9
         """
-        return native.Hose.validateName(name)
+        return native.Hose.validateName(str(name))
 
     @staticmethod
     def sleep(name):
@@ -240,7 +240,7 @@ class Hose(object):
         "semaphores". This function is only useful/necessary if you intend
         to have a large number (more than 32768) of pools.
         """
-        native.Hose.sleep(name)
+        native.Hose.sleep(str(name))
 
     @staticmethod
     def check_in_use(name):
@@ -256,7 +256,7 @@ class Hose(object):
           Beware of TOCTOU issues, though:
           http://cwe.mitre.org/data/definitions/367.html
         """
-        return native.Hose.checkInUse(name)
+        return native.Hose.checkInUse(str(name))
 
     ## ---------------------------- ##
     ## Connecting and Disconnecting ##
@@ -313,6 +313,7 @@ class Hose(object):
         Combines create() and participate() in a single call, returning a hose
         to the newly created pool.
         """
+        name = str(name)
         if not native.Hose.exists(name):
             native.Hose.create(name, pool_type, create_options)
         return participate(name, participate_options)
@@ -371,7 +372,7 @@ class Hose(object):
         a human. Besides OB_OK on success, this method can raise an
         OB_NO_MEM PlasmaException in out of memory conditions.
         """
-        self.__hose.setHoseName(name)
+        self.__hose.setHoseName(str(name))
 
     def get_info(self, hops = 0):
         """
