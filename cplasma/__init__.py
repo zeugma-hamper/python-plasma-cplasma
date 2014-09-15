@@ -70,9 +70,9 @@ def Slaw(x):
         # classes and whatnot
         return native.Slaw.make(x)
 
-def Protein(des, ing):
+def Protein(descrips, ingests):
     'Create a write-only protein for depositing purposes'
-    return native.Slaw.makeProtein(Slaw(des), Slaw(ing))
+    return native.Slaw.makeProtein(Slaw(descrips), Slaw(ingests))
 
 def QID(qid):
     'Create the magic, mythical SlawQID.  Bizarrely a cons.'
