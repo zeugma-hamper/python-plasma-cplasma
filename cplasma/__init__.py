@@ -62,6 +62,8 @@ def Slaw(x):
         return native.Slaw.make_int64(x)
     elif isinstance(x, float):
         return native.Slaw.make_float64(x)
+    elif isinstance(x, basestring):
+        return native.Slaw.make(str(x))
     else:
         # native.Slaw.make knows how to deal with Python's builtin
         # types. We currently don't have a way to deal with arbitrary
