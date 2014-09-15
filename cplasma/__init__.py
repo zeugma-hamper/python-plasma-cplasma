@@ -653,7 +653,7 @@ class HoseGang(object):
         """
         if isinstance(hose, (str, unicode)):
             hose = Hose.participate(hose)
-            self.__hoses.append(hose)
+        self.__hoses.append(hose)
         self.__gang.join(hose._native_hose())
 
     def remote_hose(self, hose):
