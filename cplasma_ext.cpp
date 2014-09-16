@@ -226,12 +226,15 @@ class BSlaw {
   }
 
   py::object emit_map () const { 
-    py::dict dct;
+    py::object collections = py::import("collections");
+    py::object od_class = collections.attr("OrderedDict");
+    py::object dct = od_class();
+    py::object set_default = dct.attr("setdefault");
     bslaw s = slaw_list_emit_first (slaw_);
     while (s != NULL) {
       BSlaw car { slaw_cons_emit_car (s) };
       BSlaw cdr { slaw_cons_emit_cdr (s) };
-      dct . setdefault (car.emit(), cdr.emit());
+      set_default (car.emit(), cdr.emit());
       s = slaw_list_emit_next (slaw_, s);
     }
     return dct;
