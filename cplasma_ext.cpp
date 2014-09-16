@@ -1098,7 +1098,7 @@ BOOST_PYTHON_MODULE(native)
   slawClass
       .def ("read", &Slaw::read)
       .def ("make", &Slaw::from_string)
-      .def ("make", &Slaw::from_wstring)
+      .def ("make", &Slaw::from_stringW)
       .def ("make", &Slaw::fromBslaw)
       .def ("make", &Slaw::fromBprotein)
       DECLARE_INTS(DECLARE_SLAW_FROM,)
