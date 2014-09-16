@@ -6,8 +6,15 @@ C Plasma
 
 import native
 import numpy
+from cplasma._pyplasma_api import RProtein
+from cplasma import exceptions
 
 POOL_WAIT_FOREVER = -1.0
+
+class slaw(object):
+    @staticmethod
+    def from_json(data):
+        return Slaw(data)
 
 def Slaw(x):
     'Turn an object in to a Slaw that you can send over a hose'
@@ -160,7 +167,7 @@ class Hose(object):
         * OB_ERRNO...
           (system error such as a failure to acquire an OS lock)
         """
-        native.Hose.create(name, pool_type, options)
+        native.Hose.create(name, pool_type, Slaw(options))
 
     @staticmethod
     def dispose(name):
@@ -541,7 +548,9 @@ class Hose(object):
         * POOL_PROTOCOL_ERROR
           (unexpected responses from the pool server)
         """
-        return self.__hose.nth (idx)
+        ret = self.__hose.nth(idx)
+        protein, index, timestamp = ret
+        return RProtein(protein, self, index, timestamp)
 
     def index_lookup(self, *args, **kwargs):
         """
@@ -591,7 +600,7 @@ class Hose(object):
         * PoolAwaitTimedoutException
           (no protein arrived before the timeout expired)
         """
-        return self.__hose.awaitNext(timeout)
+        return self.__hose.awaitNext(timeout)[0]
 
     def await_probe_frwd(self, search, timeout=POOL_WAIT_FOREVER):
         """
@@ -602,7 +611,11 @@ class Hose(object):
             timeout is overall, and does not restart when a non-matching
             protein is found.
         """
-        return self.__hose.probeForwardAwait(search, timeout)
+        search = Slaw(search)
+        r = self.__hose.probeForwardAwait(search, timeout)
+        if r is None:
+            raise exceptions.PoolAwaitTimedoutException
+        return RProtein(r[0], self, r[1], r[2])
 
     def enable_wakeup(self):
         """
@@ -651,6 +664,15 @@ class HoseGang(object):
     def __init__(self):
         self.__gang = native.Gang()
         self.__hoses = []
+
+    def find_hose_index(self, name):
+        hose_i = -1
+        name = str(name)
+        for i, hose in enumerate(self.__hoses):
+            if name in hose.get_hose_name():
+                hose_i = i
+                break
+        return hose_i
 
     def add_hose(self, hose):
         """
@@ -718,6 +740,15 @@ class HoseGang(object):
         Returns the protein, its index, its timestamp, and the name of the pool
         it came from.  Or `None` if we time out.
         '''
-        return self.__gang.awaitNext(timeout)
-
+        await_result = self.__gang.awaitNext(timeout)
+        if await_result is None:
+            return None
+        protein, index, timestamp, pool_name = await_result
+        #This is very ugly
+        my_hose = None
+        for h in self.__hoses:
+            if h.get_hose_name() in pool_name:
+                my_hose = h
+                break
+        return RProtein(protein, my_hose, index, timestamp)
 
