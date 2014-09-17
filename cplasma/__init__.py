@@ -30,7 +30,10 @@ def Slaw(x):
         for k, v in x.iteritems():
             bu.mapPut(Slaw (k), Slaw (v))
         return bu.takeMap()
+    elif isinstance(x, tuple) and len(x) == 2:
+        return native.Slaw.makeCons(Slaw(x[0]), Slaw(x[1]))
     elif isinstance(x, list) or isinstance(x, tuple):
+        #TODO: Should we reject tuples here since they can also mean cons?
         it = iter(x)
         bu = native.SlawBuilder()
         for y in it:
