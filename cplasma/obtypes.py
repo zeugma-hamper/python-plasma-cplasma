@@ -6,6 +6,8 @@ Compatibility objects to make things a little easier.
 
 import numpy
 from cplasma import native
+import StringIO
+import cStringIO
 
 oblist = list
 obbool = bool
@@ -21,6 +23,25 @@ float32 = numpy.float32
 float64 = numpy.float64
 obstring = str
 obnumber = numpy.number #parent class for ints & floats
+
+numeric_array=numpy.array
+
+def __chariter(filelike):
+    octet = filelike.read(1)
+    while octet:
+        yield ord(octet)
+        octet = filelike.read(1)
+
+def numeric_array_from_file(fp):
+    if isinstance(fp, StringIO.StringIO) \
+            or isinstance(fp, cStringIO.InputType) \
+            or isinstance(fp, cStringIO.OutputType):
+        n_arr = numpy.fromiter(__chariter(fp), numpy.uint8)
+    else:
+        #TODO: Test this
+        n_arr = numpy.fromfile(fp)
+    return n_arr
+
 
 # For vector types we have to be a little more careful
 # to make sure they're converted in to proper vectors
