@@ -20,187 +20,197 @@ int64 = numpy.int64
 float32 = numpy.float32
 float64 = numpy.float64
 obstring = str
+obnumber = numpy.number #parent class for ints & floats
 
 # For vector types we have to be a little more careful
 # to make sure they're converted in to proper vectors
 # as opposed to plain old numeric arrays.
 
-class v2unt8(object):
+class obmv(object):
+    """
+    Parent class for vectors.  Pyplasma inherits from obnumber, but that
+    does not work here b/c of some compatability issues with numpy's number
+    class
+    """
+    pass
+
+class v2unt8(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.uint8)
     def toSlaw(self):
         return native.Slaw.make_v2unt8(self.data)
 
-class v3unt8(object):
+class v3unt8(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.uint8)
     def toSlaw(self):
         return native.Slaw.make_v3unt8(self.data)
 
-class v4unt8(object):
+class v4unt8(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.uint8)
     def toSlaw(self):
         return native.Slaw.make_v4unt8(self.data)
 
-class v2int8(object):
+class v2int8(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.int8)
     def toSlaw(self):
         return native.Slaw.make_v2int8(self.data)
 
-class v3int8(object):
+class v3int8(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.int8)
     def toSlaw(self):
         return native.Slaw.make_v3int8(self.data)
 
-class v4int8(object):
+class v4int8(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.int8)
     def toSlaw(self):
         return native.Slaw.make_v4int8(self.data)
 
-class v2unt16(object):
+class v2unt16(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.uint16)
     def toSlaw(self):
         return native.Slaw.make_v2unt16(self.data)
 
-class v3unt16(object):
+class v3unt16(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.uint16)
     def toSlaw(self):
         return native.Slaw.make_v3unt16(self.data)
 
-class v4unt16(object):
+class v4unt16(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.uint16)
     def toSlaw(self):
         return native.Slaw.make_v4unt16(self.data)
 
-class v2int16(object):
+class v2int16(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.int16)
     def toSlaw(self):
         return native.Slaw.make_v2int16(self.data)
 
-class v3int16(object):
+class v3int16(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.int16)
     def toSlaw(self):
         return native.Slaw.make_v3int16(self.data)
 
-class v4int16(object):
+class v4int16(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.int16)
     def toSlaw(self):
         return native.Slaw.make_v4int16(self.data)
 
-class v2unt32(object):
+class v2unt32(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.uint32)
     def toSlaw(self):
         return native.Slaw.make_v2unt32(self.data)
 
-class v3unt32(object):
+class v3unt32(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.uint32)
     def toSlaw(self):
         return native.Slaw.make_v3unt32(self.data)
 
-class v4unt32(object):
+class v4unt32(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.uint32)
     def toSlaw(self):
         return native.Slaw.make_v4unt32(self.data)
 
-class v2int32(object):
+class v2int32(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.int32)
     def toSlaw(self):
         return native.Slaw.make_v2int32(self.data)
 
-class v3int32(object):
+class v3int32(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.int32)
     def toSlaw(self):
         return native.Slaw.make_v3int32(self.data)
 
-class v4int32(object):
+class v4int32(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.int32)
     def toSlaw(self):
         return native.Slaw.make_v4int32(self.data)
 
-class v2unt64(object):
+class v2unt64(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.uint64)
     def toSlaw(self):
         return native.Slaw.make_v2unt64(self.data)
 
-class v3unt64(object):
+class v3unt64(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.uint64)
     def toSlaw(self):
         return native.Slaw.make_v3unt64(self.data)
 
-class v4unt64(object):
+class v4unt64(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.uint64)
     def toSlaw(self):
         return native.Slaw.make_v4unt64(self.data)
 
-class v2int64(object):
+class v2int64(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.int64)
     def toSlaw(self):
         return native.Slaw.make_v2int64(self.data)
 
-class v3int64(object):
+class v3int64(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.int64)
     def toSlaw(self):
         return native.Slaw.make_v3int64(self.data)
 
-class v4int64(object):
+class v4int64(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.int64)
     def toSlaw(self):
         return native.Slaw.make_v4int64(self.data)
 
-class v2float32(object):
+class v2float32(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.float32)
     def toSlaw(self):
         return native.Slaw.make_v2float32(self.data)
 
-class v3float32(object):
+class v3float32(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.float32)
     def toSlaw(self):
         return native.Slaw.make_v3float32(self.data)
 
-class v4float32(object):
+class v4float32(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.float32)
     def toSlaw(self):
         return native.Slaw.make_v4float32(self.data)
 
-class v2float64(object):
+class v2float64(obmv):
     def __init__(self, x, y):
         self.data = numpy.array([x, y], numpy.float64)
     def toSlaw(self):
         return native.Slaw.make_v2float64(self.data)
 
-class v3float64(object):
+class v3float64(obmv):
     def __init__(self, x, y, z):
         self.data = numpy.array([x, y, z], numpy.float64)
     def toSlaw(self):
         return native.Slaw.make_v3float64(self.data)
 
-class v4float64(object):
+class v4float64(obmv):
     def __init__(self, x, y, z, w):
         self.data = numpy.array([x, y, z, w], numpy.float64)
     def toSlaw(self):
         return native.Slaw.make_v4float64(self.data)
+
