@@ -14,6 +14,8 @@
 
 #include <string>
 #include <vector>
+#include <locale>
+#include <codecvt>
 
 #include <fcntl.h>
 
@@ -21,6 +23,11 @@
 
 
 namespace py = boost::python;
+
+const std::string fromwstr(const std::wstring& s) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.to_bytes(s);
+}
 
 class PlasmaException : public std::exception {
  private:
@@ -418,6 +425,9 @@ class Slaw {
     }
     return Ref(new Slaw (s));
   }
+  static Ref fromYamlW (std::wstring yaml) {
+    return fromYaml (fromwstr (yaml));
+  }
   
   static Ref fromFile (std::string filename) {
     slaw_input input;
@@ -473,6 +483,10 @@ class Slaw {
 
   static Ref from_string (std::string s) {
     return Ref(new Slaw (slaw_string (s.c_str())));
+  }
+
+  static Ref from_stringW (std::wstring s) {
+    return from_string (fromwstr (s));
   }
 
   static Ref makeCons (Ref car, Ref cdr) {
@@ -667,12 +681,11 @@ class SlawBuilder {
   }
 };
 
-
 class Hose {
  private:
   pool_hose hose;
- public:
-  Hose (std::string pool) : hose { nullptr } {
+
+  void Init (std::string pool) {
     ob_retort tort = pool_participate (pool . c_str (),
                                        &hose,
                                        nullptr);
@@ -680,6 +693,14 @@ class Hose {
       hose = nullptr; // belt, suspenders
       throw PlasmaException (tort);
     }
+  }
+ public:
+  Hose (std::string pool) : hose { nullptr } {
+    Init (pool);
+  }
+
+  Hose (std::wstring pool) : hose { nullptr } {
+    Init (fromwstr(pool));
   }
 
 
@@ -1017,6 +1038,7 @@ BOOST_PYTHON_MODULE(native)
       hoseClass ("Hose", py::init<std::string> ());
 
   hoseClass
+      .def (py::init<std::wstring> ())
       .add_property("newestIndex", &Hose::newestIndex)
       .add_property("oldestIndex", &Hose::oldestIndex)
       .add_property("index", &Hose::index)
@@ -1076,6 +1098,7 @@ BOOST_PYTHON_MODULE(native)
   slawClass
       .def ("read", &Slaw::read)
       .def ("make", &Slaw::from_string)
+      .def ("make", &Slaw::from_stringW)
       .def ("make", &Slaw::fromBslaw)
       .def ("make", &Slaw::fromBprotein)
       DECLARE_INTS(DECLARE_SLAW_FROM,)
@@ -1095,6 +1118,7 @@ BOOST_PYTHON_MODULE(native)
       .def ("fromFileBinary", &Slaw::fromFileBinary)
       .def ("toYaml", &Slaw::toYaml, "Dump this slaw to a yaml string")
       .def ("fromYaml", &Slaw::fromYaml, "Create a new slaw from a yaml string")
+      .def ("fromYaml", &Slaw::fromYamlW, "Create a new slaw from a yaml string")
       .def ("descrips", &Slaw::descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
       .def ("ingests", &Slaw::ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
       .def ("isProtein", &Slaw::isProtein, "Is this bslaw a protein?")
