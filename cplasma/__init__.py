@@ -358,7 +358,10 @@ class Hose(object):
         return native.Hose.listPoolsEx(prefix)
 
     def name(self):
-        'Get the name of the pool this hose is connected to'
+        """
+        Get the name of the pool this hose is connected to.
+        This is also the name used by the user to connect to the pool.
+        """
         return self.__hose.name
 
     def get_hose_name(self):
