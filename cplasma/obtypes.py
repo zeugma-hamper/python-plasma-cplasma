@@ -53,7 +53,8 @@ class obmv(object):
     does not work here b/c of some compatability issues with numpy's number
     class
     """
-    pass
+    def __iter__(self):
+        return numpy.nditer(self.data)
 
 class v2unt8(obmv):
     def __init__(self, x, y):
