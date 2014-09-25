@@ -431,8 +431,23 @@ class Slaw {
   static Ref fromYamlW (std::wstring yaml) {
     return fromYaml (fromwstr (yaml));
   }
+
+  static py::list fromFileGeneric(slaw_input input) {
+    slaw s;
+    py::list output;
+    ob_retort tort = slaw_input_read (input, &s);
+    while (OB_OK == tort) {
+      output.append(Ref (new Slaw (s)));
+      tort = slaw_input_read (input, &s);
+    }
+    slaw_input_close (input);
+    if (SLAW_END_OF_FILE != tort) {
+      throw PlasmaException (tort);
+    }
+    return output;
+  }
   
-  static Ref fromFile (std::string filename) {
+  static py::list fromFile (std::string filename) {
     slaw_input input;
     int fd = open(filename . c_str(), O_RDONLY);
     if (-1 == fd) {
@@ -443,18 +458,10 @@ class Slaw {
       slaw_input_close (input);
       throw PlasmaException (tort);
     }
-    slaw s;
-    tort = slaw_input_read (input, &s);
-    if (0 > tort) {
-      slaw_input_close (input);
-      throw PlasmaException (tort);
-    }
-
-    slaw_input_close(input);
-    return Ref (new Slaw (s));
+    return fromFileGeneric (input);
   }
 
-  static Ref fromFileBinary (std::string filename) {
+  static py::list fromFileBinary (std::string filename) {
     slaw_input input;
     int fd = open(filename . c_str(), O_RDONLY);
     if (-1 == fd) {
@@ -465,15 +472,7 @@ class Slaw {
       slaw_input_close (input);
       throw PlasmaException (tort);
     }
-    slaw s;
-    tort = slaw_input_read (input, &s);
-    if (0 > tort) {
-      slaw_input_close (input);
-      throw PlasmaException (tort);
-    }
-
-    slaw_input_close(input);
-    return Ref (new Slaw (s));
+    return fromFileGeneric (input);
   }
 
   static Ref fromBslaw (BSlaw bs) {
