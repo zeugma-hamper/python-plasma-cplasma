@@ -206,6 +206,10 @@ class Hose(object):
         """
         return native.Hose.exists(str(name))
 
+    def set_hose_index(self, index):
+        #+1 because otherwise the hose returns the index we just set
+        native.Hose.seekto(self.__hose, index+1)
+
     @staticmethod
     def validate_name(name):
         """
