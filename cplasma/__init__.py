@@ -16,6 +16,21 @@ class slaw(object):
     def from_json(data):
         return Slaw(data)
 
+import time
+def _interruptable_await(hose_or_gang, stop):
+    if stop == POOL_WAIT_FOREVER:
+        stop = None
+    else:
+        stop = time.time() + stop
+    curr = time.time()
+    while stop is None or curr < stop:
+        result = hose_or_gang.awaitNext(0.1)
+        if result is not None:
+            return result
+        curr = time.time()
+    #Time ran out, nothing received
+    return None
+
 def Slaw(x):
     'Turn an object in to a Slaw that you can send over a hose'
     # x = compat.loam_conv(x)
@@ -604,7 +619,11 @@ class Hose(object):
         * PoolAwaitTimedoutException
           (no protein arrived before the timeout expired)
         """
-        return self.__hose.awaitNext(timeout)[0]
+        await_result = _interruptable_await(self.__hose, timeout)
+        if await_result is None:
+            return None
+        protein, index, timestamp = await_result
+        return RProtein(protein, self, index, timestamp)
 
     def await_probe_frwd(self, search, timeout=POOL_WAIT_FOREVER):
         """
@@ -744,7 +763,7 @@ class HoseGang(object):
         Returns the protein, its index, its timestamp, and the name of the pool
         it came from.  Or `None` if we time out.
         '''
-        await_result = self.__gang.awaitNext(timeout)
+        await_result = _interruptable_await(self.__gang, timeout)
         if await_result is None:
             return None
         protein, index, timestamp, pool_name = await_result
