@@ -40,68 +40,14 @@ class RProtein(object):
     def origin(self):
         return self._origin
 
-
-
-    ## descrips matching
-    def search(self, needle, how=SEARCH_GAP):
-        """
-        Descrips search.
-
-        This function looks for needle in this protein's descrips, using
-        the plasma semantics. That means that the search will only succeed
-        if the descrips are an oblist, in which case this functions returns:
-
-        * if needle is a list, self.descrips().search_ex(needle,how)
-        * if needle is not a list, self.descrips().search_ex([needle,], how)
-
-        If this protein's descrips are not a list, this function returns a
-        negative value. The optional how argument works the same as in the
-        oblist method search_ex().
-        """
-        ## Slaw or bslaw, Protein_Search_Type
-        ## return int64
-        descrips = self.__protein.descrips
-        if type(descrips) != cplasma.native.BSlaw:
-            print 'descrips is not a list (%s)' % type(descrips)
-            return -1
-        if isinstance(needle, cplasma.native.BSlaw):
-            pass
-        else:
-            if isinstance(needle, list):
-                if len(needle) == 0:
-                    return 0
-            else:
-                needle = [needle,]
-            slneedle = cplasma.Slaw(needle)
-        #TODO: Fix this:
-        #return descrips.gapsearch(slneedle)
-
-        #TODO: REMOVE THE THE REST OF THIS
-        hit = -1
-        found = []
-        nd_i = 0
-        dlist = descrips.emit()
-        for i in range(len(dlist)):
-            if dlist[i] == needle[nd_i]:
-                found.append(True)
-                if hit < 0:
-                    hit = i
-                nd_i += 1
-                if nd_i >= len(needle):
-                    break
-        if len(found) != len(needle):
-            return -1
-        return hit
-
-
     def matches(self, needle, how=SEARCH_GAP):
-        """
-        Convenience function checking if self.search(needle, how) > -1
-        """
-        ## Slaw or bslaw, Protein_Search_Type
-        ## return obbool
-        return bool(self.search(needle, how) > -1)
-
+        if how != SEARCH_GAP:
+            raise NotImplementedError('Only support the SEARCH_GAP matches currently')
+        #need to save as a variable here or else it goes out of scope,
+        #and you're reading random garbage from meory
+        needle_ = cplasma.Slaw(needle)
+        ind = self.__protein.descrips.gapsearch(needle_.read())
+        return bool(ind >  -1)
 
     def descrips(self):
         de = self.__protein.descrips
