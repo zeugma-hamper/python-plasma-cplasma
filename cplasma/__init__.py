@@ -604,7 +604,11 @@ class Hose(object):
         * PoolAwaitTimedoutException
           (no protein arrived before the timeout expired)
         """
-        return self.__hose.awaitNext(timeout)[0]
+        await_result = self.__hose.awaitNext(timeout)
+        if await_result is None:
+            return None
+        protein, index, timestamp = await_result
+        return RProtein(protein, self, index, timestamp)
 
     def await_probe_frwd(self, search, timeout=POOL_WAIT_FOREVER):
         """
