@@ -446,14 +446,29 @@ class Slaw {
     }
     return output;
   }
+
+  static py::list fromFileDescriptor (int fd) {
+    slaw_input input;
+    ob_retort tort = slaw_input_open_text_fdx(fd, &input);
+    if (0 > tort) {
+      slaw_input_close (input);
+      throw PlasmaException (tort);
+    }
+    return fromFileGeneric (input);
+  }
+  
   
   static py::list fromFile (std::string filename) {
-    slaw_input input;
     int fd = open(filename . c_str(), O_RDONLY);
     if (-1 == fd) {
       throw PlasmaException (OB_NOT_FOUND);
     }
-    ob_retort tort = slaw_input_open_text_fdx(fd, &input);
+    return fromFileDescriptor (fd);
+  }
+
+  static py::list fromFileDescriptorBinary (int fd) {
+    slaw_input input;
+    ob_retort tort = slaw_input_open_binary_fdx(fd, &input);
     if (0 > tort) {
       slaw_input_close (input);
       throw PlasmaException (tort);
@@ -462,17 +477,11 @@ class Slaw {
   }
 
   static py::list fromFileBinary (std::string filename) {
-    slaw_input input;
     int fd = open(filename . c_str(), O_RDONLY);
     if (-1 == fd) {
       throw PlasmaException (OB_NOT_FOUND);
     }
-    ob_retort tort = slaw_input_open_binary_fdx(fd, &input);
-    if (0 > tort) {
-      slaw_input_close (input);
-      throw PlasmaException (tort);
-    }
-    return fromFileGeneric (input);
+    return fromFileDescriptorBinary (fd);
   }
 
   static Ref fromBslaw (BSlaw bs) {
@@ -1116,8 +1125,14 @@ BOOST_PYTHON_MODULE(native)
       .def ("nil", &Slaw::nil)
       .def ("makeProtein", &Slaw::makeProtein)
       .def ("makeCons", &Slaw::makeCons)
-      .def ("fromFile", &Slaw::fromFile)
-      .def ("fromFileBinary", &Slaw::fromFileBinary)
+      .def ("fromFileName", &Slaw::fromFile,
+            "Read a list of proteins from a file by name")
+      .def ("fromFileNameBinary", &Slaw::fromFileBinary, 
+            "Read a list of proteins from a binary file by name")
+      .def ("fromFileDescriptor", &Slaw::fromFileDescriptor,
+            "Read a list of proteins from a file by file descriptor")
+      .def ("fromFileDescriptorBinary", &Slaw::fromFileDescriptorBinary,
+            "Read a list of proteins from a binary file by file descriptor")
       .def ("toYaml", &Slaw::toYaml, "Dump this slaw to a yaml string")
       .def ("fromYaml", &Slaw::fromYaml, "Create a new slaw from a yaml string")
       .def ("fromYaml", &Slaw::fromYamlW, "Create a new slaw from a yaml string")
@@ -1128,8 +1143,11 @@ BOOST_PYTHON_MODULE(native)
       .staticmethod ("makeArray")
       .staticmethod ("nil")
       .staticmethod ("makeProtein")
-      .staticmethod ("fromFile")
-      .staticmethod ("fromFileBinary")
+      .staticmethod ("fromFileName")
+      .staticmethod ("fromFileNameBinary")
+      .staticmethod ("fromFileDescriptor")
+      .staticmethod ("fromFileDescriptorBinary")
+
       .staticmethod ("fromYaml")
       ;
 
