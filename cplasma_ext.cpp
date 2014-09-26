@@ -432,7 +432,7 @@ class Slaw {
     return fromYaml (fromwstr (yaml));
   }
 
-  static py::list fromFileGeneric(slaw_input input) {
+  static py::list fromFileGeneric(slaw_input input, bool close) {
     slaw s;
     py::list output;
     ob_retort tort = slaw_input_read (input, &s);
@@ -440,7 +440,9 @@ class Slaw {
       output.append(Ref (new Slaw (s)));
       tort = slaw_input_read (input, &s);
     }
-    slaw_input_close (input);
+    if (close) {
+      slaw_input_close (input);
+    }
     if (SLAW_END_OF_FILE != tort) {
       throw PlasmaException (tort);
     }
@@ -448,13 +450,19 @@ class Slaw {
   }
 
   static py::list fromFileDescriptor (int fd) {
+    return fromFileDescriptor_ (fd, false);
+  }
+
+  static py::list fromFileDescriptor_ (int fd, bool close) {
     slaw_input input;
     ob_retort tort = slaw_input_open_text_fdx(fd, &input);
     if (0 > tort) {
-      slaw_input_close (input);
+      if (close) {
+        slaw_input_close (input);
+      }
       throw PlasmaException (tort);
     }
-    return fromFileGeneric (input);
+    return fromFileGeneric (input, close);
   }
   
   
@@ -463,17 +471,23 @@ class Slaw {
     if (-1 == fd) {
       throw PlasmaException (OB_NOT_FOUND);
     }
-    return fromFileDescriptor (fd);
+    return fromFileDescriptor_ (fd, true);
   }
 
   static py::list fromFileDescriptorBinary (int fd) {
+    return fromFileDescriptor_(fd, false);
+  }
+
+  static py::list fromFileDescriptorBinary_ (int fd, bool close) {
     slaw_input input;
     ob_retort tort = slaw_input_open_binary_fdx(fd, &input);
     if (0 > tort) {
-      slaw_input_close (input);
+      if (close) {
+        slaw_input_close (input);
+      }
       throw PlasmaException (tort);
     }
-    return fromFileGeneric (input);
+    return fromFileGeneric (input, close);
   }
 
   static py::list fromFileBinary (std::string filename) {
@@ -481,7 +495,7 @@ class Slaw {
     if (-1 == fd) {
       throw PlasmaException (OB_NOT_FOUND);
     }
-    return fromFileDescriptorBinary (fd);
+    return fromFileDescriptorBinary_ (fd, true);
   }
 
   static Ref fromBslaw (BSlaw bs) {
