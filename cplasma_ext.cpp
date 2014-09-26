@@ -431,49 +431,71 @@ class Slaw {
   static Ref fromYamlW (std::wstring yaml) {
     return fromYaml (fromwstr (yaml));
   }
-  
-  static Ref fromFile (std::string filename) {
-    slaw_input input;
-    int fd = open(filename . c_str(), O_RDONLY);
-    if (-1 == fd) {
-      throw PlasmaException (OB_NOT_FOUND);
-    }
-    ob_retort tort = slaw_input_open_text_fdx(fd, &input);
-    if (0 > tort) {
-      slaw_input_close (input);
-      throw PlasmaException (tort);
-    }
-    slaw s;
-    tort = slaw_input_read (input, &s);
-    if (0 > tort) {
-      slaw_input_close (input);
-      throw PlasmaException (tort);
-    }
 
-    slaw_input_close(input);
-    return Ref (new Slaw (s));
+  static py::list fromFileGeneric(slaw_input input, bool close) {
+    slaw s;
+    py::list output;
+    ob_retort tort = slaw_input_read (input, &s);
+    while (OB_OK == tort) {
+      output.append(Ref (new Slaw (s)));
+      tort = slaw_input_read (input, &s);
+    }
+    if (close) {
+      slaw_input_close (input);
+    }
+    if (SLAW_END_OF_FILE != tort) {
+      throw PlasmaException (tort);
+    }
+    return output;
   }
 
-  static Ref fromFileBinary (std::string filename) {
+  static py::list fromFileDescriptor (int fd) {
+    return fromFileDescriptor_ (fd, false);
+  }
+
+  static py::list fromFileDescriptor_ (int fd, bool close) {
     slaw_input input;
+    ob_retort tort = slaw_input_open_text_fdx(fd, &input);
+    if (0 > tort) {
+      if (close) {
+        slaw_input_close (input);
+      }
+      throw PlasmaException (tort);
+    }
+    return fromFileGeneric (input, close);
+  }
+  
+  
+  static py::list fromFile (std::string filename) {
     int fd = open(filename . c_str(), O_RDONLY);
     if (-1 == fd) {
       throw PlasmaException (OB_NOT_FOUND);
     }
+    return fromFileDescriptor_ (fd, true);
+  }
+
+  static py::list fromFileDescriptorBinary (int fd) {
+    return fromFileDescriptor_(fd, false);
+  }
+
+  static py::list fromFileDescriptorBinary_ (int fd, bool close) {
+    slaw_input input;
     ob_retort tort = slaw_input_open_binary_fdx(fd, &input);
     if (0 > tort) {
-      slaw_input_close (input);
+      if (close) {
+        slaw_input_close (input);
+      }
       throw PlasmaException (tort);
     }
-    slaw s;
-    tort = slaw_input_read (input, &s);
-    if (0 > tort) {
-      slaw_input_close (input);
-      throw PlasmaException (tort);
-    }
+    return fromFileGeneric (input, close);
+  }
 
-    slaw_input_close(input);
-    return Ref (new Slaw (s));
+  static py::list fromFileBinary (std::string filename) {
+    int fd = open(filename . c_str(), O_RDONLY);
+    if (-1 == fd) {
+      throw PlasmaException (OB_NOT_FOUND);
+    }
+    return fromFileDescriptorBinary_ (fd, true);
   }
 
   static Ref fromBslaw (BSlaw bs) {
@@ -1117,8 +1139,14 @@ BOOST_PYTHON_MODULE(native)
       .def ("nil", &Slaw::nil)
       .def ("makeProtein", &Slaw::makeProtein)
       .def ("makeCons", &Slaw::makeCons)
-      .def ("fromFile", &Slaw::fromFile)
-      .def ("fromFileBinary", &Slaw::fromFileBinary)
+      .def ("fromFileName", &Slaw::fromFile,
+            "Read a list of proteins from a file by name")
+      .def ("fromFileNameBinary", &Slaw::fromFileBinary, 
+            "Read a list of proteins from a binary file by name")
+      .def ("fromFileDescriptor", &Slaw::fromFileDescriptor,
+            "Read a list of proteins from a file by file descriptor")
+      .def ("fromFileDescriptorBinary", &Slaw::fromFileDescriptorBinary,
+            "Read a list of proteins from a binary file by file descriptor")
       .def ("toYaml", &Slaw::toYaml, "Dump this slaw to a yaml string")
       .def ("fromYaml", &Slaw::fromYaml, "Create a new slaw from a yaml string")
       .def ("fromYaml", &Slaw::fromYamlW, "Create a new slaw from a yaml string")
@@ -1129,8 +1157,11 @@ BOOST_PYTHON_MODULE(native)
       .staticmethod ("makeArray")
       .staticmethod ("nil")
       .staticmethod ("makeProtein")
-      .staticmethod ("fromFile")
-      .staticmethod ("fromFileBinary")
+      .staticmethod ("fromFileName")
+      .staticmethod ("fromFileNameBinary")
+      .staticmethod ("fromFileDescriptor")
+      .staticmethod ("fromFileDescriptorBinary")
+
       .staticmethod ("fromYaml")
       ;
 
