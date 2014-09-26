@@ -9,6 +9,7 @@ from cplasma import native
 import StringIO
 import cStringIO
 
+from collections import OrderedDict as obmap
 oblist = list
 obbool = bool
 unt8 = numpy.uint8
