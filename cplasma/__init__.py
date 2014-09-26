@@ -8,6 +8,7 @@ import native
 import numpy
 from cplasma._pyplasma_api import RProtein
 from cplasma import exceptions
+from cplasma.interrupt import BlockSigint
 
 POOL_WAIT_FOREVER = -1.0
 
@@ -15,21 +16,6 @@ class slaw(object):
     @staticmethod
     def from_json(data):
         return Slaw(data)
-
-import time
-def _interruptable_await(hose_or_gang, stop):
-    if stop == POOL_WAIT_FOREVER:
-        stop = None
-    else:
-        stop = time.time() + stop
-    curr = time.time()
-    while stop is None or curr < stop:
-        result = hose_or_gang.awaitNext(0.1)
-        if result is not None:
-            return result
-        curr = time.time()
-    #Time ran out, nothing received
-    return None
 
 def Slaw(x):
     'Turn an object in to a Slaw that you can send over a hose'
@@ -619,7 +605,8 @@ class Hose(object):
         * PoolAwaitTimedoutException
           (no protein arrived before the timeout expired)
         """
-        await_result = _interruptable_await(self.__hose, timeout)
+        _block_sig = BlockSigint()
+        await_result = self.__hose.awaitNext(timeout)
         if await_result is None:
             return None
         protein, index, timestamp = await_result
@@ -634,6 +621,7 @@ class Hose(object):
             timeout is overall, and does not restart when a non-matching
             protein is found.
         """
+        _block_sig = BlockSigint()
         search = Slaw(search)
         r = self.__hose.probeForwardAwait(search, timeout)
         if r is None:
@@ -763,7 +751,8 @@ class HoseGang(object):
         Returns the protein, its index, its timestamp, and the name of the pool
         it came from.  Or `None` if we time out.
         '''
-        await_result = _interruptable_await(self.__gang, timeout)
+        _block_sig = BlockSigint()
+        await_result = self.__gang.awaitNext(timeout)
         if await_result is None:
             return None
         protein, index, timestamp, pool_name = await_result
