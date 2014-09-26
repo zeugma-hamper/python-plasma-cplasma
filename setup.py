@@ -1,5 +1,5 @@
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup, Distribution
+from setuptools.extension import Extension
 import subprocess, os, os.path, re, numpy
 
 OBLONG_DIR = '/opt/oblong'
@@ -41,7 +41,12 @@ def cplasma_extension():
                      extra_link_args = linker_args.split())
 
 
+class BinaryDistribution(Distribution):
+    def is_pure(self):
+        return False
+
 setup(name         = 'cplasma',
+      install_requires = ['numpy'],
       version      = '0.1',
       author       = 'Corey Porter',
       author_email = 'cp@mct.io',
@@ -51,4 +56,5 @@ setup(name         = 'cplasma',
       url          = 'http://mct.io/',
       packages     = ['cplasma'],
       ext_modules  = [cplasma_extension()],
-      requires     = ['numpy'])
+      requires     = ['numpy'],
+      distclass    = BinaryDistribution)
