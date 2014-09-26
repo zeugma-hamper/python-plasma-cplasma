@@ -94,7 +94,7 @@ def _sanitize_for_json(obj):
     """
     if isinstance(obj, numpy.ndarray) and obj.ndim == 1:
         return obj.tolist()
-    elif isinstance(obj, list):
+    elif isinstance(obj, list) or isinstance(obj, tuple):
         clean_list = [None]*len(obj)
         for i in xrange(len(obj)):
             clean_list[i] = _sanitize_for_json(obj[i])
