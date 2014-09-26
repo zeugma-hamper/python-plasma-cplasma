@@ -76,7 +76,10 @@ class Descrips(object):
 
 class Ingests(OrderedDict):
     def __init__(self, ingests):
-        _ingests = ingests.emit()
+        if isinstance(ingests, cplasma.native.BSlaw):
+            _ingests = ingests.emit()
+        else:
+            _ingests = ingests().emit()
         super(Ingests, self).__init__(_ingests)
 
     def to_json(self, degrade=False):
