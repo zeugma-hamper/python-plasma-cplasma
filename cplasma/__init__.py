@@ -8,6 +8,7 @@ import native
 import numpy
 from cplasma._pyplasma_api import RProtein
 from cplasma import exceptions
+from cplasma.interrupt import BlockSigint
 
 POOL_WAIT_FOREVER = -1.0
 
@@ -604,6 +605,7 @@ class Hose(object):
         * PoolAwaitTimedoutException
           (no protein arrived before the timeout expired)
         """
+        _block_sig = BlockSigint()
         await_result = self.__hose.awaitNext(timeout)
         if await_result is None:
             return None
@@ -619,6 +621,7 @@ class Hose(object):
             timeout is overall, and does not restart when a non-matching
             protein is found.
         """
+        _block_sig = BlockSigint()
         search = Slaw(search)
         r = self.__hose.probeForwardAwait(search, timeout)
         if r is None:
@@ -748,6 +751,7 @@ class HoseGang(object):
         Returns the protein, its index, its timestamp, and the name of the pool
         it came from.  Or `None` if we time out.
         '''
+        _block_sig = BlockSigint()
         await_result = self.__gang.awaitNext(timeout)
         if await_result is None:
             return None
