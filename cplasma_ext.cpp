@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 #include <locale>
-#include <codecvt>
+#include <clocale>
 
 #include <fcntl.h>
 
@@ -23,11 +23,6 @@
 
 
 namespace py = boost::python;
-
-const std::string fromwstr(const std::wstring& s) {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.to_bytes(s);
-}
 
 class PlasmaException : public std::exception {
  private:
@@ -39,6 +34,31 @@ class PlasmaException : public std::exception {
   const char* description() const { return ob_error_string (tort); }
   const ob_retort retort() const { return tort; }
 };
+
+#ifdef DARWIN
+#include <codecvt>
+const std::string fromwstr(const std::wstring& s) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.to_bytes(s);
+}
+#else
+const std::string fromwstr(const std::wstring& ws) {
+    const std::locale locale("");
+    typedef std::codecvt<wchar_t, char, std::mbstate_t> converter_type;
+    const converter_type& converter = std::use_facet<converter_type>(locale);
+    std::vector<char> to(ws.length() * converter.max_length());
+    std::mbstate_t state;
+    const wchar_t* from_next;
+    char* to_next;
+    const converter_type::result result =
+        converter.out(state, ws.data(), ws.data() + ws.length(),
+                      from_next, &to[0], &to[0] + to.size(), to_next);
+    if (result != converter_type::ok && result != converter_type::noconv) {
+      throw PlasmaException (OB_UNKNOWN_ERR);      
+    }
+    return std::string (&to[0], to_next);
+}
+#endif
 
 template <typename T> struct array_writer {};
 
