@@ -345,7 +345,7 @@ class Hose(object):
         name = str(name)
         if not native.Hose.exists(name):
             native.Hose.create(name, pool_type, create_options)
-        return participate(name, participate_options)
+        return Hose.participate(name, participate_options)
 
     def withdraw(self):
         '''
