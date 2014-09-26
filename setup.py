@@ -1,6 +1,6 @@
 from setuptools import setup, Distribution
 from setuptools.extension import Extension
-import subprocess, os, os.path, re, numpy
+import subprocess, os, os.path, re, numpy, platform
 
 OBLONG_DIR = '/opt/oblong'
 
@@ -30,14 +30,18 @@ def cplasma_extension():
     else:
         os.environ['PKG_CONFIG_PATH'] = extra_pkg
 
-    compiler_args = subprocess.check_output(['pkg-config', '--cflags', 'libPlasma'])
+    compiler_args = subprocess.check_output(['pkg-config', '--cflags', 'libPlasma']).split()
     linker_args = subprocess.check_output(['pkg-config', '--libs', 'libPlasma'])
+
+    mac = platform.mac_ver()
+    if 0 < len(mac[0]):
+        compiler_args.append('-DDARWIN')
 
     return Extension('cplasma.native',
                      sources = ['cplasma_ext.cpp'],
                      libraries = ['boost_python'],
                      include_dirs = [numpy.get_include()],
-                     extra_compile_args = ['-std=c++0x'] + compiler_args.split(),
+                     extra_compile_args = ['-std=c++0x'] + compiler_args,
                      extra_link_args = linker_args.split())
 
 
@@ -48,8 +52,8 @@ class BinaryDistribution(Distribution):
 setup(name         = 'cplasma',
       install_requires = ['numpy'],
       version      = '0.1',
-      author       = 'Corey Porter',
-      author_email = 'cp@mct.io',
+      author       = 'MCT',
+      author_email = 'suppoert@mct.io',
       description  = "native binding to Oblong's plasma library",
       license      = "Entirely proprietary. Don't even think of it",
       keywords     = 'plasma',
