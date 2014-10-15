@@ -462,6 +462,8 @@ class Hose(object):
           (unexpected responses from the pool server)
         """
         if not isinstance(protein, native.Slaw):
+            #TODO: Not sure what to do here
+            #sort of like protein = native.Slaw.makeProtein(protein)
             protein = Slaw(protein)
         return self.__hose.deposit(protein)
 

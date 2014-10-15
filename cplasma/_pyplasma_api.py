@@ -65,21 +65,18 @@ class RProtein(object):
 
 class Descrips(object):
     def __init__(self, descrips):
-        self.__descrips = descrips
+        _descrips = descrips().emit()
+        self.__descrips = _descrips
 
     def __getitem__(self, i):
-        l = self.__descrips.emit()
-        return l[i]
+        return self.__descrips[i]
 
     def to_json(self, *args):
-        return _sanitize_for_json(self.__descrips.emit())
+        return _sanitize_for_json(self.__descrips)
 
 class Ingests(OrderedDict):
     def __init__(self, ingests):
-        if isinstance(ingests, cplasma.native.BSlaw):
-            _ingests = ingests.emit()
-        else:
-            _ingests = ingests().emit()
+        _ingests = ingests().emit()
         super(Ingests, self).__init__(_ingests)
 
     def to_json(self, degrade=False):
