@@ -6,6 +6,7 @@ change this filename or public methods in this file, check pyplasma as well.
 import re, cStringIO
 import cplasma.native
 from cplasma._pyplasma_api import RProtein
+from cplasma import Protein
 
 def dump_yaml(obj):
     return '%YAML 1.1\n%TAG ! tag:oblong.com,2009:slaw/\n--- %s' % obj.toYaml()
@@ -36,8 +37,8 @@ def parse_yaml_proteins(filelike):
     "Return all proteins from a file-ish thing"
     if hasattr(filelike, 'fileno'):
         fd = filelike.fileno()
-        out = [RProtein(pro, None, None, None)
-               for pro in cplasma.native.Slaw.fromFileDescriptor(fd)]
+        out = [RProtein(Protein(pro.descrips(), pro.ingests()), None, None, None)
+               for pro in cplasma.native.Slaw.fromFileDescriptor(fd) if pro.isProtein()]
         return out
     else:
         splitter = re.compile('^\.\.\.$', re.M)

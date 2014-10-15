@@ -34,17 +34,17 @@ class Metabolizer(object):
         self.__metabolizers \
             = [(d, f, n) for (d, f, n) in self.__metabolizers if n != name]
 
-    def metabolizeOne(self, bprotein):
-        for descrips, fun, name in self.__metabolizers:
-            if -1 < bprotein.descrips.gapsearch(descrips.read()):
-                fun(bprotein)
+    def metabolizeOne(self):
+        bundle = self.__gang.awaitNext(self.__busy_time)
+        if bundle:
+            bprotein, idx, ts, source = bundle
+            for descrips, fun, name in self.__metabolizers:
+                if -1 < bprotein.descrips().gapsearch(descrips.read()):
+                    fun(bprotein)
 
     def metabolize(self):
         while not self.__quit:
-            bundle = self.__gang.awaitNext(self.__busy_time)
-            if bundle:
-                bpro, idx, ts, source = bundle
-                self.metabolizeOne(bpro)
+            self.metabolizeOne()
 
 
-                
+
