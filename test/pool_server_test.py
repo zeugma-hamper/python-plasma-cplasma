@@ -74,6 +74,13 @@ class TestDS(unittest.TestCase):
             self.assertEqual(exp_descrips, pool_pro.descrips().to_json())
             self.assertEqual(exp_ingests, pool_pro.ingests().to_json())
 
+    def test_matches(self):
+        with TempPool(TEST_POOL) as hose:
+            pool_pro = _deposit_protein(hose, REMOVE_TOPO)
+            self.assertTrue(isinstance(pool_pro, cplasma._pyplasma_api.RProtein))
+            exp_descrips = ['sluice', 'prot-spec v1.0', 'topology', 'remove']
+            self.assertTrue(pool_pro.matches(['sluice', 'prot-spec v1.0', 'topology', 'remove']))
+
 
 if __name__ == '__main__':
     unittest.main()
