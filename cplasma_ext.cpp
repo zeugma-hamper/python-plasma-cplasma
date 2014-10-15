@@ -1073,8 +1073,8 @@ BOOST_PYTHON_MODULE(native)
       bproClass ("BProtein", py::no_init);
 
   bproClass
-      .add_property("ingests", &BProtein::ingests)
-      .add_property("descrips", &BProtein::descrips)
+      .def("ingests", &BProtein::ingests, "Return this protein's ingests")
+      .def("descrips", &BProtein::descrips, "Return this protein's descrips")
       .def("emit", &BProtein::emit)
       .def ("toYaml", &BProtein::toYaml, "Dump this protein to a yaml string")
       ;

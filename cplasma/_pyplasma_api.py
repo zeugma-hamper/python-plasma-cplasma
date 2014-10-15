@@ -50,11 +50,11 @@ class RProtein(object):
         return bool(ind >  -1)
 
     def descrips(self):
-        de = self.__protein.descrips
+        de = self.__protein.descrips()
         return Descrips(de)
 
     def ingests(self):
-        ing = self.__protein.ingests
+        ing = self.__protein.ingests()
         return Ingests(ing)
 
     def index(self):
@@ -65,8 +65,7 @@ class RProtein(object):
 
 class Descrips(object):
     def __init__(self, descrips):
-        _descrips = descrips().emit()
-        self.__descrips = _descrips
+        self.__descrips = descrips.emit()
 
     def __getitem__(self, i):
         return self.__descrips[i]
@@ -76,8 +75,7 @@ class Descrips(object):
 
 class Ingests(OrderedDict):
     def __init__(self, ingests):
-        _ingests = ingests().emit()
-        super(Ingests, self).__init__(_ingests)
+        super(Ingests, self).__init__(ingests.emit())
 
     def to_json(self, degrade=False):
         return _sanitize_for_json(self)
