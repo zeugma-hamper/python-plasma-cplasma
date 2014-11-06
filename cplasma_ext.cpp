@@ -246,6 +246,8 @@ class BSlaw {
   slaw dup () { return slaw_dup (slaw_); }
   bslaw peek () const { return slaw_; }
 
+  unt64 hash () { return slaw_hash (slaw_); }
+
   std::string toYaml() {
     slaw s;
     ob_retort tort = slaw_to_string (slaw_, &s);
@@ -366,6 +368,8 @@ class BProtein {
 
   protein dup () { return protein_dup (pro); }
 
+  unt64 hash () { return slaw_hash (pro); }
+
   py::object emit () const {
     py::dict dct;
     dct.setdefault("descrips", descrips () . emit ());
@@ -435,6 +439,8 @@ class Slaw {
       slaw_ = nullptr;
     }
   }
+
+  unt64 hash () { return slaw_hash (slaw_); }
 
   slaw take () { 
     slaw out = slaw_;
@@ -1074,6 +1080,7 @@ BOOST_PYTHON_MODULE(native)
       bslawClass ("BSlaw", py::no_init);
 
   bslawClass
+      .def ("__hash__", &BSlaw::hash, "Hash function")
       .def ("listCount", &BSlaw::listCount, "How many items are in this list?")
       .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
       .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
@@ -1090,6 +1097,7 @@ BOOST_PYTHON_MODULE(native)
       bproClass ("BProtein", py::no_init);
 
   bproClass
+      .def ("__hash__", &BProtein::hash, "Hash function")
       .def("ingests", &BProtein::ingests, "Return this protein's ingests")
       .def("descrips", &BProtein::descrips, "Return this protein's descrips")
       .def("emit", &BProtein::emit)
@@ -1158,6 +1166,7 @@ BOOST_PYTHON_MODULE(native)
       slawClass ("Slaw");
 
   slawClass
+      .def ("__hash__", &Slaw::hash, "Hash function")
       .def ("read", &Slaw::read)
       .def ("make", &Slaw::from_string)
       .def ("make", &Slaw::from_stringW)
