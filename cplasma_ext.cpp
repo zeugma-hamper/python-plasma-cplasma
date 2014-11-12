@@ -41,7 +41,23 @@ const std::string fromwstr(const std::wstring& s) {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter.to_bytes(s);
 }
+const std::wstring fromstr (const std::string& s) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.from_bytes (s);
+}
 #else
+const std::wstring fromstr (const std::string& s) {
+    std::string curLocale = setlocale(LC_ALL, ""); 
+    const char* _Source = s.c_str();
+    size_t _Dsize = mbstowcs(NULL, _Source, 0) + 1;
+    wchar_t *_Dest = new wchar_t[_Dsize];
+    wmemset(_Dest, 0, _Dsize);
+    mbstowcs(_Dest,_Source,_Dsize);
+    std::wstring result = _Dest;
+    delete []_Dest;
+    setlocale(LC_ALL, curLocale.c_str());
+    return result;
+}
 const std::string fromwstr(const std::wstring& ws) {
     const std::locale locale("");
     typedef std::codecvt<wchar_t, char, std::mbstate_t> converter_type;
@@ -392,7 +408,8 @@ py::object BSlaw::emit () const {
   } else if (slaw_is_nil (slaw_)) { 
     return py::object ();
   } else if (slaw_is_string (slaw_)) {
-    return py::object (slaw_string_emit (slaw_));
+      std::wstring tmp = fromstr(slaw_string_emit (slaw_));
+      return py::object(tmp);
   } else if (slaw_is_boolean (slaw_)) {
     return py::object (bool(*slaw_boolean_emit (slaw_)));
   } else {
