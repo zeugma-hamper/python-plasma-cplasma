@@ -479,6 +479,21 @@ class Slaw  : public BSlaw {
     return fromYaml (fromwstr (yaml));
   }
 
+
+  Ref slaw_descrips() const {
+    if (! slaw_is_protein (slaw_)) {
+      throw PlasmaException (POOL_NOT_A_PROTEIN);
+    }
+    return Ref (new Slaw (slaw_dup(protein_descrips (slaw_))));
+  }
+
+  Ref slaw_ingests() const {
+    if (! slaw_is_protein (slaw_)) {
+      throw PlasmaException (POOL_NOT_A_PROTEIN);
+    }
+    return Ref (new Slaw (slaw_dup(protein_ingests (slaw_))));
+  }
+
   static py::list fromFileGeneric(slaw_input input, bool close) {
     slaw s;
     py::list output;
@@ -1228,8 +1243,8 @@ BOOST_PYTHON_MODULE(native)
       .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
       .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
       .def ("mapFind", &BSlaw::slaw_mapFind, "Find the slaw (or nil) associated with this map key.")
-      .def ("descrips", &BSlaw::descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
-      .def ("ingests", &BSlaw::ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
+      .def ("descrips", &Slaw::slaw_descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
+      .def ("ingests", &Slaw::slaw_ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
       .def ("isProtein", &BSlaw::isProtein, "Is this bslaw a protein?")
       .def ("toYaml", &BSlaw::toYaml, "Dump this slaw to a yaml string")
 
