@@ -351,11 +351,18 @@ class BSlaw {
   }
 
   int64 listFind (int64) const;
-  BSlaw mapFind (boost::shared_ptr<Slaw>) const;
 
-  int64 gapsearch (BSlaw search) const {
+  BSlaw mapFind (const BSlaw& val) const {
+      return BSlaw (slaw_map_find (slaw_, val . peek ()));
+  }
+  BSlaw slaw_mapFind (boost::shared_ptr<Slaw>) const;
+
+
+  int64 gapsearch (const BSlaw& search) const {
     return slaw_list_gapsearch (slaw_, search . peek ());
   }
+
+  int64 slaw_gapsearch (boost::shared_ptr<Slaw> search) const;
 };
 
 
@@ -701,8 +708,13 @@ int64 BSlaw::listFind (int64 x) const {
   return slaw_list_find (slaw_, val -> peek ());
 }
 
-BSlaw BSlaw::mapFind (boost::shared_ptr<Slaw> val) const {
+BSlaw BSlaw::slaw_mapFind (boost::shared_ptr<Slaw> val) const {
   return BSlaw (slaw_map_find (slaw_, val -> peek ()));
+}
+
+
+int64 BSlaw::slaw_gapsearch (boost::shared_ptr<Slaw> search) const {
+    return slaw_list_gapsearch (slaw_, search -> peek ());
 }
 
 
@@ -1082,8 +1094,10 @@ BOOST_PYTHON_MODULE(native)
       .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
       .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
       .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("gapsearch", &BSlaw::slaw_gapsearch, "Run the gapsearch algorithm against a given slaw.")
       .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
       .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("mapFind", &BSlaw::slaw_mapFind, "Find the slaw (or nil) associated with this map key.")
       .def ("descrips", &BSlaw::descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
       .def ("ingests", &BSlaw::ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
       .def ("isProtein", &BSlaw::isProtein, "Is this bslaw a protein?")
@@ -1210,8 +1224,10 @@ BOOST_PYTHON_MODULE(native)
       .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
       .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
       .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("gapsearch", &BSlaw::slaw_gapsearch, "Run the gapsearch algorithm against a given slaw.")
       .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
       .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("mapFind", &BSlaw::slaw_mapFind, "Find the slaw (or nil) associated with this map key.")
       .def ("descrips", &BSlaw::descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
       .def ("ingests", &BSlaw::ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
       .def ("isProtein", &BSlaw::isProtein, "Is this bslaw a protein?")

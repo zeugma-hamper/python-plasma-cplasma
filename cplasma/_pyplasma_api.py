@@ -46,7 +46,7 @@ class RProtein(object):
         #need to save as a variable here or else it goes out of scope,
         #and you're reading random garbage from meory
         needle_ = cplasma.Slaw(needle)
-        ind = self.__protein.descrips().gapsearch(needle_.read())
+        ind = self.__protein.descrips().gapsearch(needle_)
         return bool(ind >  -1)
 
     def descrips(self):
