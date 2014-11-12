@@ -237,11 +237,13 @@ py::object makeNumpyArray (const T* data, int64 len) {
 class Slaw;
 
 class BSlaw {
- private:
-  bslaw slaw_;
+ protected:
+  slaw slaw_ { nullptr };
 
  public:
-  BSlaw (bslaw s) : slaw_ { s } {}
+  BSlaw () = default;
+  BSlaw (bslaw s) : slaw_ { const_cast<slaw> (s) } {}
+  virtual ~BSlaw () {}
 
   slaw dup () { return slaw_dup (slaw_); }
   bslaw peek () const { return slaw_; }
@@ -349,11 +351,18 @@ class BSlaw {
   }
 
   int64 listFind (int64) const;
-  BSlaw mapFind (boost::shared_ptr<Slaw>) const;
 
-  int64 gapsearch (BSlaw search) const {
+  BSlaw mapFind (const BSlaw& val) const {
+      return BSlaw (slaw_map_find (slaw_, val . peek ()));
+  }
+  BSlaw slaw_mapFind (boost::shared_ptr<Slaw>) const;
+
+
+  int64 gapsearch (const BSlaw& search) const {
     return slaw_list_gapsearch (slaw_, search . peek ());
   }
+
+  int64 slaw_gapsearch (boost::shared_ptr<Slaw> search) const;
 };
 
 
@@ -422,18 +431,13 @@ py::object BSlaw::emit () const {
 }
 
 
-class Slaw {
- private:
-  slaw slaw_;
-
+class Slaw  : public BSlaw {
  public:
   typedef boost::shared_ptr<Slaw> Ref;
   Slaw () = default;
-  Slaw (slaw s) : slaw_ { s } {
-    assert(nullptr != s);
-  }
+  Slaw (slaw s) : BSlaw { s } {}
 
-  ~Slaw () {
+  virtual ~Slaw () {
     if (nullptr != slaw_) {
       slaw_free (slaw_);
       slaw_ = nullptr;
@@ -473,6 +477,21 @@ class Slaw {
   }
   static Ref fromYamlW (std::wstring yaml) {
     return fromYaml (fromwstr (yaml));
+  }
+
+
+  Ref slaw_descrips() const {
+    if (! slaw_is_protein (slaw_)) {
+      throw PlasmaException (POOL_NOT_A_PROTEIN);
+    }
+    return Ref (new Slaw (slaw_dup(protein_descrips (slaw_))));
+  }
+
+  Ref slaw_ingests() const {
+    if (! slaw_is_protein (slaw_)) {
+      throw PlasmaException (POOL_NOT_A_PROTEIN);
+    }
+    return Ref (new Slaw (slaw_dup(protein_ingests (slaw_))));
   }
 
   static py::list fromFileGeneric(slaw_input input, bool close) {
@@ -704,8 +723,13 @@ int64 BSlaw::listFind (int64 x) const {
   return slaw_list_find (slaw_, val -> peek ());
 }
 
-BSlaw BSlaw::mapFind (boost::shared_ptr<Slaw> val) const {
+BSlaw BSlaw::slaw_mapFind (boost::shared_ptr<Slaw> val) const {
   return BSlaw (slaw_map_find (slaw_, val -> peek ()));
+}
+
+
+int64 BSlaw::slaw_gapsearch (boost::shared_ptr<Slaw> search) const {
+    return slaw_list_gapsearch (slaw_, search -> peek ());
 }
 
 
@@ -1085,8 +1109,10 @@ BOOST_PYTHON_MODULE(native)
       .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
       .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
       .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("gapsearch", &BSlaw::slaw_gapsearch, "Run the gapsearch algorithm against a given slaw.")
       .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
       .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("mapFind", &BSlaw::slaw_mapFind, "Find the slaw (or nil) associated with this map key.")
       .def ("descrips", &BSlaw::descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
       .def ("ingests", &BSlaw::ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
       .def ("isProtein", &BSlaw::isProtein, "Is this bslaw a protein?")
@@ -1207,8 +1233,21 @@ BOOST_PYTHON_MODULE(native)
       .staticmethod ("fromFileNameBinary")
       .staticmethod ("fromFileDescriptor")
       .staticmethod ("fromFileDescriptorBinary")
-
       .staticmethod ("fromYaml")
+      // And then the reading bits from BSlaw
+      .def ("listCount", &BSlaw::listCount, "How many items are in this list?")
+      .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
+      .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
+      .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("gapsearch", &BSlaw::slaw_gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
+      .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("mapFind", &BSlaw::slaw_mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("descrips", &Slaw::slaw_descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
+      .def ("ingests", &Slaw::slaw_ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
+      .def ("isProtein", &BSlaw::isProtein, "Is this bslaw a protein?")
+      .def ("toYaml", &BSlaw::toYaml, "Dump this slaw to a yaml string")
+
       ;
 
   py::class_<SlawBuilder, SlawBuilder::Ref>
