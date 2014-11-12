@@ -237,11 +237,13 @@ py::object makeNumpyArray (const T* data, int64 len) {
 class Slaw;
 
 class BSlaw {
- private:
-  bslaw slaw_;
+ protected:
+  slaw slaw_ { nullptr };
 
  public:
-  BSlaw (bslaw s) : slaw_ { s } {}
+  BSlaw () = default;
+  BSlaw (bslaw s) : slaw_ { const_cast<slaw> (s) } {}
+  virtual ~BSlaw () {}
 
   slaw dup () { return slaw_dup (slaw_); }
   bslaw peek () const { return slaw_; }
@@ -422,18 +424,13 @@ py::object BSlaw::emit () const {
 }
 
 
-class Slaw {
- private:
-  slaw slaw_;
-
+class Slaw  : public BSlaw {
  public:
   typedef boost::shared_ptr<Slaw> Ref;
   Slaw () = default;
-  Slaw (slaw s) : slaw_ { s } {
-    assert(nullptr != s);
-  }
+  Slaw (slaw s) : BSlaw { s } {}
 
-  ~Slaw () {
+  virtual ~Slaw () {
     if (nullptr != slaw_) {
       slaw_free (slaw_);
       slaw_ = nullptr;
@@ -1207,8 +1204,19 @@ BOOST_PYTHON_MODULE(native)
       .staticmethod ("fromFileNameBinary")
       .staticmethod ("fromFileDescriptor")
       .staticmethod ("fromFileDescriptorBinary")
-
       .staticmethod ("fromYaml")
+      // And then the reading bits from BSlaw
+      .def ("listCount", &BSlaw::listCount, "How many items are in this list?")
+      .def ("nth", &BSlaw::nth, "Get the nth item/cons in this list/map.")
+      .def ("emit", &BSlaw::emit, "Transform this slaw into a Python data structure.")
+      .def ("gapsearch", &BSlaw::gapsearch, "Run the gapsearch algorithm against a given slaw.")
+      .def ("listFind", &BSlaw::listFind, "What is the index of the argument slaw?")
+      .def ("mapFind", &BSlaw::mapFind, "Find the slaw (or nil) associated with this map key.")
+      .def ("descrips", &BSlaw::descrips, "If the slaw is a protein, return its descrips. PlasmaException otherwise.")
+      .def ("ingests", &BSlaw::ingests, "If the slaw is a protein, return its ingests. PlasmaException otherwise.")
+      .def ("isProtein", &BSlaw::isProtein, "Is this bslaw a protein?")
+      .def ("toYaml", &BSlaw::toYaml, "Dump this slaw to a yaml string")
+
       ;
 
   py::class_<SlawBuilder, SlawBuilder::Ref>
