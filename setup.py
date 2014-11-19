@@ -25,8 +25,8 @@ def cplasma_extension():
     os.environ['G_SPEAK_HOME'] = find_gspeak()
     extra_pkg = os.path.join(os.environ['G_SPEAK_HOME'], 'lib/pkgconfig')
     if 'PKG_CONFIG_PATH' in os.environ:
-        os.environ['PKG_CONFIG_PATH'] = ':'.join(os.environ['PKG_CONFIG_PATH'],
-                                                 extra_pkg)
+        os.environ['PKG_CONFIG_PATH'] = ':'.join([os.environ['PKG_CONFIG_PATH'],
+                                                  extra_pkg])
     else:
         os.environ['PKG_CONFIG_PATH'] = extra_pkg
 
