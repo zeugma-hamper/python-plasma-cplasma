@@ -238,10 +238,10 @@ class Slaw;
 
 class BSlaw {
  protected:
-  slaw slaw_ { nullptr };
+  slaw slaw_;
 
  public:
-  BSlaw () = default;
+  BSlaw () : slaw_{nullptr}{}
   BSlaw (bslaw s) : slaw_ { const_cast<slaw> (s) } {}
   virtual ~BSlaw () {}
 
