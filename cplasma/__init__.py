@@ -88,7 +88,7 @@ def Protein(descrips, ingests):
 def QID(qid):
     'Create the magic, mythical SlawQID.  Bizarrely a cons.'
     bytez = numpy.array([qid[i] for i in xrange(16)], numpy.uint8)
-    return native.Slaw.makeCons(native.Slaw.make('SlawQID'),
+    return native.Slaw.makeCons(native.Slaw.make('SlawedQID'),
                                 native.Slaw.makeArray(bytez))
 
 class Hose(object):
