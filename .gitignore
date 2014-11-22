@@ -1,3 +1,6 @@
 *.pyc
 *~
 build
+*.so
+venv
+dist
