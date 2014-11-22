@@ -51,7 +51,7 @@ class BinaryDistribution(Distribution):
 
 setup(name         = 'cplasma',
       install_requires = ['numpy'],
-      version      = '0.1',
+      version      = '0.0.2',
       author       = 'MCT',
       author_email = 'suppoert@mct.io',
       description  = "native binding to Oblong's plasma library",

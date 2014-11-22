@@ -1,0 +1,7 @@
+Language: Cpp
+BasedOnStyle: llvm
+IndentWidth: 4
+AccessModifierOffset: -4
+BinPackParameters: false
+Standard: Cpp11
+SpaceBeforeParens: Always
