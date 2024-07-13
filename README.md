@@ -1,4 +1,17 @@
 
+(The 'other' python plasma bindings, open-sourced along with the rest of
+these here dialects as part of 2022 arrangement with Oblong Inc.
+
+As elsewhere, original author/committer particulars have been
+anonymized in recognition of universal, ecumenical guilt and
+innocence.)
+
+- - - -
+
+Original README contents reproduced below in history-affirming sepia.
+
+- - - -
+
 # cplasma
 
 A plasma binding for python.
