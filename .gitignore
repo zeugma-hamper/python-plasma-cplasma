@@ -4,3 +4,4 @@ build
 *.so
 venv
 dist
+docker/boost_*
